@@ -23,8 +23,7 @@ class sshCredentials():
             with open(output_path, 'wb') as keys_file:
                 pickle.dump(self, keys_file)
             with open(public_key_path, "w") as pubkey_file:
-                pubkey_file.write(self.public.decode('utf-8'))
-        return self
+                pubkey_file.write('{} {}@biobb\n'.format(self.public.decode('utf-8'), self.userid))
     
 if __name__ == "__main__":
     host = sys.argv[1]
