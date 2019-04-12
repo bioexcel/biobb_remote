@@ -11,5 +11,5 @@ import sys
 #import paramiko
 from ssh_session import SshSession
 
-session = SshSession(sys.argv[1])
+session = SshSession(credentials_path=sys.argv[1])
 session.run_sftp(sys.argv[2], sys.argv[3], sys.argv[4])

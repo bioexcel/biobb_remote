@@ -7,7 +7,7 @@ import sys
 from ssh_session import SshSession
 
 if __name__ == "__main__":
-    session = SshSession(sys.argv[1])
+    session = SshSession(credentials_path=sys.argv[1])
     (stdin, stdout, stderr) = session.run_command(sys.argv[2])
     print(''.join(stdout))
     print(''.join(stderr), file=sys.stderr)

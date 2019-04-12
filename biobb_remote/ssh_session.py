@@ -33,12 +33,13 @@ class sshCredentials():
     def generate_key(self, nbits=2048):
         """ Generates new Private Key """
         self.key = RSAKey.generate(nbits)
- 
+
     def get_public_str(self, suffix='@biobb'):
+        """ Returns a readable public key suitable to add to authorized_keys """
         return '{} {} {}{}\n'.format(
             self.key.get_name(), self.key.get_base64(), self.userid, suffix
         )
-    
+
     def save(self, output_path='', public_key_path=None):
         """ Save packed credentials on external file"""
         if output_path != '':
@@ -65,30 +66,36 @@ class SshSession():
         self.ssh.set_missing_host_key_policy(AutoAddPolicy())
         #paramiko.common.logging.basicConfig(level=paramiko.common.DEBUG)
         try:
-            self.ssh.connect(self.ssh_data.host, username=self.ssh_data.userid, pkey=self.ssh_data.key, look_for_keys=False)
+            self.ssh.connect(
+                self.ssh_data.host, 
+                username=self.ssh_data.userid, 
+                pkey=self.ssh_data.key, 
+                look_for_keys=False
+            )
         except AuthenticationException:
             print("Authentication Error", file=sys.stderr)
-        
+
     def run_command(self, command):
         return self.ssh.exec_command(command)
-    
-    def run_sftp(self, oper, input_file_path, output_file_path): 
-    
+
+    def run_sftp(self, oper, input_file_path, output_file_path):
         sftp = self.ssh.open_sftp()
         try:
             if oper == 'get':
                 sftp.get(input_file_path, output_file_path)
+                return False
             elif oper == 'put':
                 sftp.put(input_file_path, output_file_path)
+                return False
             elif oper == 'create':
                 remote_fileh = sftp.file(output_file_path, "w")
                 remote_fileh.write(input_file_path)
                 remote_fileh.close()
+                return False
             elif oper == 'open':
                 return sftp.open(output_file_path)
             else:
-                raise
+                print('Unknown sftp command', oper)
+                return True
         except IOError as err:
             print(err, file=sys.stderr)
-
-        
