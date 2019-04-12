@@ -7,39 +7,46 @@
 __author__ = "gelpi"
 __date__ = "$08-March-2019  17:32:38$"
 
-import sys
-import json
-from paramiko import SSHClient, AutoAddPolicy, RSAKey, AuthenticationException
-from io import StringIO
-import paramiko
 from credentials import sshCredentials
+from io import StringIO
+import json
+import paramiko
+from paramiko import AuthenticationException
+from paramiko import AutoAddPolicy
+from paramiko import RSAKey
+from paramiko import SSHClient
 import pickle
+import sys
 
 
 class sshExec():
-        def __init__(self, op, credFn, input_file_path, output_file_path):
-                fh=open(credFn,'rb')
-                self.sshData = pickle.load(fh)
-                fh.close()
-                self.key = RSAKey.from_private_key(StringIO(self.sshData.private.decode('utf-8')))
-                self.op = op
-                self.input_file_path = input_file_path
-                self.output_file_path = output_file_path
+    def __init__(self, op, credFn, input_file_path, output_file_path):
+        fh = open(credFn, 'rb')
+        self.sshData = pickle.load(fh)    
+        self.sshData['key'] = RSAKey.from_private_key(StringIO(self.sshData['key'].getvalue()))
+        fh.close()
+        self.op = op
+        self.input_file_path = input_file_path
+        self.output_file_path = output_file_path
       
-        def launch(self):
-                ssh = SSHClient()
-                ssh.set_missing_host_key_policy(AutoAddPolicy())
-                #paramiko.common.logging.basicConfig(level=paramiko.common.DEBUG)
-                try:
-                        ssh.connect(self.sshData.host, username=self.sshData.userid, pkey=self.key, look_for_keys=False)
-                except AuthenticationException:
-                        sys.stderr.write("Authentication Error\n")
-                sftp = ssh.open_sftp()
-                if self.op == 'get':
-                        sftp.get(self.input_file_path, self.output_file_path)   
-                elif self.op == 'put':
-                        sftp.put(self.input_file_path, self.output_file_path)   
-                ssh.close()
+    def launch(self):
+        ssh = SSHClient()
+        ssh.set_missing_host_key_policy(AutoAddPolicy())
+        #paramiko.common.logging.basicConfig(level=paramiko.common.DEBUG)
+        try:
+            ssh.connect(self.sshData['host'], username=self.sshData['userid'], pkey=self.sshData['key'], look_for_keys=False)
+        except AuthenticationException:
+            sys.stderr.write("Authentication Error\n")
+        sftp = ssh.open_sftp()
+        try:
+            if self.op == 'get':
+                sftp.get(self.input_file_path, self.output_file_path)   
+            elif self.op == 'put':
+                sftp.put(self.input_file_path, self.output_file_path)   
+        except IOError as err:
+            print(err)
+
+        ssh.close()
 
 
 if __name__ == "__main__":

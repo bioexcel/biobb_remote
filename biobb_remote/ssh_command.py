@@ -16,17 +16,16 @@ class sshExec():
     def __init__(self, credFn, command):
         self.command = command
         fh=open(credFn,'rb')
-        self.sshData = pickle.load(fh)
+        self.sshData = pickle.load(fh)    
+        self.sshData['key'] = RSAKey.from_private_key(StringIO(self.sshData['key'].getvalue()))
         fh.close()
-
-        self.key = RSAKey.from_private_key(StringIO(self.sshData.private.decode('utf-8')))
-      
+        
     def launch(self):
         ssh = SSHClient()
         ssh.set_missing_host_key_policy(AutoAddPolicy())
         #paramiko.common.logging.basicConfig(level=paramiko.common.DEBUG)
         try:
-            ssh.connect(self.sshData.host, username=self.sshData.userid, pkey=self.key, look_for_keys=False)
+            ssh.connect(self.sshData['host'], username=self.sshData['userid'], pkey=self.sshData['key'], look_for_keys=False)
         except AuthenticationException:
             sys.stderr.write("Authentication Error\n")
         (stdin, stdout, stderr) = ssh.exec_command(command)
