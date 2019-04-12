@@ -4,7 +4,7 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name="biobb_template",
+    name="biobb_remote",
     version="0.0.0",
     author="Biobb developers",
     author_email="gelpi@ub.edu",
@@ -18,7 +18,7 @@ setuptools.setup(
         "Bioexcel": "https://bioexcel.eu/"
     },
     packages=setuptools.find_packages(exclude=['docs', 'test']),
-    install_requires=['paramiko'],
+    install_requires=[],
     python_requires='>=3',
     classifiers=(
         "Development Status :: 3 - Alpha",
