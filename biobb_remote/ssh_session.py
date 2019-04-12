@@ -57,7 +57,7 @@ class sshCredentials():
 
 class SshSession():
     def __init__(self, ssh_data=None, credentials_path=None):
-        if ssh_data in None:
+        if ssh_data is None:
             self.ssh_data = sshCredentials(credentials_path is None)
             if credentials_path:
                 self.ssh_data.load_from_file(credentials_path)
