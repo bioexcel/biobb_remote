@@ -3,6 +3,8 @@ __author__ = "gelpi"
 __date__ = "$08-March-2019 17:32:38$"
 
 import sys
+import os
+import stat
 import pickle
 #import paramiko
 from io import StringIO
@@ -16,7 +18,7 @@ class sshCredentials():
         self.userid = userid
         self.key = None
         if generate_key:
-            self.generate()
+            self.generate_key()
 
     def load_from_file(self, credentials_path):
         """ Obtain credentials from file """
@@ -39,8 +41,12 @@ class sshCredentials():
         return '{} {} {}{}\n'.format(
             self.key.get_name(), self.key.get_base64(), self.userid, suffix
         )
-
-    def save(self, output_path='', public_key_path=None):
+    def get_private(self):
+        private = StringIO()
+        self.key.write_private_key(private)
+        return private.getvalue()
+            
+    def save(self, output_path='', public_key_path=None, private_key_path=None):
         """ Save packed credentials on external file"""
         if output_path != '':
             with open(output_path, 'wb') as keys_file:
@@ -53,8 +59,12 @@ class sshCredentials():
                         'data': private
                     }, keys_file)
             if public_key_path:
-                with open(public_key_path, "w") as pubkey_file:
+                with open(public_key_path, 'w') as pubkey_file:
                     pubkey_file.write(self.get_public_str())
+            if private_key_path:
+                with open(private_key_path, 'w') as privkey_file:
+                    privkey_file.write(self.get_private())
+                os.chmod(private_key_path, stat.S_IREAD + stat.S_IWRITE)
 
 class SshSession():
     def __init__(self, ssh_data=None, credentials_path=None):

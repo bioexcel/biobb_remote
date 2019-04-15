@@ -5,17 +5,91 @@ __author__ = "gelpi"
 __date__ = "$08-March-2019 17:32:38$"
 
 import sys
+import argparse
 from ssh_session import sshCredentials
 
-if len(sys.argv) < 2:
-    print("Usage: credentials host_name user_id credentials_file [public_key_file]")
-    sys.exit()
-pkey_file_path = None
-if len(sys.argv) == 5:
-    pkey_file_path = sys.argv[4]
+class Credentials():
+    def __init__(self, args):
+        self.args = args
+        
+    def launch(self):
+        if self.args.operation == 'create':
+            credentials = sshCredentials(
+                host=self.args.hostname,
+                userid=self.args.userid,
+                generate_key=False
+            )
+            credentials.generate_key(self.args.nbits)
+            credentials.save(
+                output_path=self.args.keys_path,
+                public_key_path=self.args.pubkey_path,
+                private_key_path=self.args.privkey_path
+            )
+            print("Credentials stored in",args.keys_path)
+            if self.args.pubkey_path is None:
+                print("Public key, add to authorized_keys on remote host")
+                print(credentials.get_public_str())
 
-credentials = sshCredentials(sys.argv[1], sys.argv[2])
-credentials.generate_key()
-credentials.save(sys.argv[3], pkey_file_path)
-if not pkey_file_path:
-    print(credentials.get_public_str())
+        elif self.args.operation == 'get_pubkey':
+            credentials = sshCredentials()
+            credentials.load_from_file(self.args.keys_path)
+            print(credentials.get_public_str())
+
+        elif self.args.operation == 'get_private':
+            credentials = sshCredentials()
+            credentials.load_from_file(self.args.keys_path)
+            print(credentials.get_private())
+                
+        else:
+            print("Error: unknown op", file=sys.stderr)
+        
+if __name__ == "__main__":
+    
+    argparser = argparse.ArgumentParser(
+        description='Credentials manager for biobb_remote'
+    )
+    argparser.add_argument(
+        dest='operation',
+        help='Operation: create|get_pubkey',
+        choices=['create', 'get_pubkey', 'get_private']
+    )
+    argparser.add_argument(
+        '--user',
+        dest='userid',
+        help='User id'
+    )
+    argparser.add_argument(
+        '--host',
+        dest='hostname',
+        help='Host name'
+    )
+    argparser.add_argument(
+        '--pubkey_path',
+        dest='pubkey_path',
+        help='Public key file path'
+    )
+    argparser.add_argument(
+        '--nbits',
+        dest='nbits',
+        type=int,
+        default=2048,
+        help='Number of key bits'
+    )
+    argparser.add_argument(
+        '--keys_path',
+        dest='keys_path',
+        help='Credentials file path',
+        required=True
+    )
+    argparser.add_argument(
+        '--privkey_path',
+        dest='privkey_path',
+        help='Private key file path'
+    )
+    args = argparser.parse_args()
+    
+    if args.operation == 'create':
+        if args.userid is None or args.hostname is None:
+            sys.exit("ssh_command: error: Userid and hostname are required to create credentials")
+    
+    Credentials(args).launch()
