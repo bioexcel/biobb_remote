@@ -11,7 +11,7 @@ from io import StringIO
 from paramiko import SSHClient, AutoAddPolicy, AuthenticationException, RSAKey
 
 
-class sshCredentials():
+class SshCredentials():
     """ Generation of ssl credentials for remote execution """
     def __init__(self, host='', userid='', generate_key=False):
         self.host = host
@@ -42,10 +42,11 @@ class sshCredentials():
             self.key.get_name(), self.key.get_base64(), self.userid, suffix
         )
     def get_private(self):
+        """ Return a readable private key"""
         private = StringIO()
         self.key.write_private_key(private)
         return private.getvalue()
-            
+
     def save(self, output_path='', public_key_path=None, private_key_path=None):
         """ Save packed credentials on external file"""
         if output_path != '':
@@ -67,9 +68,10 @@ class sshCredentials():
                 os.chmod(private_key_path, stat.S_IREAD + stat.S_IWRITE)
 
 class SshSession():
+    """ Class wrapping ssh operations """
     def __init__(self, ssh_data=None, credentials_path=None):
         if ssh_data is None:
-            self.ssh_data = sshCredentials(credentials_path is None)
+            self.ssh_data = SshCredentials(credentials_path is None)
             if credentials_path:
                 self.ssh_data.load_from_file(credentials_path)
         self.ssh = SSHClient()
@@ -77,35 +79,37 @@ class SshSession():
         #paramiko.common.logging.basicConfig(level=paramiko.common.DEBUG)
         try:
             self.ssh.connect(
-                self.ssh_data.host, 
-                username=self.ssh_data.userid, 
-                pkey=self.ssh_data.key, 
+                self.ssh_data.host,
+                username=self.ssh_data.userid,
+                pkey=self.ssh_data.key,
                 look_for_keys=False
             )
         except AuthenticationException:
             print("Authentication Error", file=sys.stderr)
 
     def run_command(self, command):
+        """ Runs SSH command on remote"""
         return self.ssh.exec_command(command)
 
     def run_sftp(self, oper, input_file_path, output_file_path):
+        """ Runs SFTP session on remote"""
         sftp = self.ssh.open_sftp()
         try:
             if oper == 'get':
                 sftp.get(input_file_path, output_file_path)
-                return False
             elif oper == 'put':
                 sftp.put(input_file_path, output_file_path)
-                return False
             elif oper == 'create':
-                remote_fileh = sftp.file(output_file_path, "w")
-                remote_fileh.write(input_file_path)
-                remote_fileh.close()
-                return False
+                with sftp.file(output_file_path, "w") as remote_fileh:
+                    remote_fileh.write(input_file_path)
             elif oper == 'open':
                 return sftp.open(output_file_path)
+            elif oper == 'file':
+                with sftp.file(input_file_path, "r") as remote_file:
+                    return remote_file.read().decode()
             else:
                 print('Unknown sftp command', oper)
                 return True
         except IOError as err:
-            print(err, file=sys.stderr)
+            sys.exit(err)
+        return False

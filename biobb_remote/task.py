@@ -2,7 +2,7 @@
 
 import os
 import base64
-from ssh_session import sshCredentials, SshSession
+from ssh_session import SshCredentials, SshSession
 
 class Task():
     """ Classe to handle task execution """
