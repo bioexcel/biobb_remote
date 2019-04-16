@@ -6,7 +6,7 @@ __date__ = "$08-March-2019 17:32:38$"
 
 import sys
 import argparse
-from ssh_session import SshCredentials
+from biobb_remote.ssh_session import SSHCredentials
 
 ARGPARSE = argparse.ArgumentParser(
     description='Credentials manager for biobb_remote'
@@ -59,7 +59,7 @@ class Credentials():
     def launch(self):
         """ Launch execution following biobb_template"""
         if self.args.operation == 'create':
-            credentials = SshCredentials(
+            credentials = SSHCredentials(
                 host=self.args.hostname,
                 userid=self.args.userid,
                 generate_key=False
@@ -76,7 +76,7 @@ class Credentials():
                 print(credentials.get_public_str())
 
         else:
-            credentials = SshCredentials()
+            credentials = SSHCredentials()
             credentials.load_from_file(self.args.keys_path)
             if self.args.operation == 'get_pubkey':
                 print(credentials.get_public_str())

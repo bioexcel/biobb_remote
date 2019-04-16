@@ -11,7 +11,7 @@ from io import StringIO
 from paramiko import SSHClient, AutoAddPolicy, AuthenticationException, RSAKey
 
 
-class SshCredentials():
+class SSHCredentials():
     """ Generation of ssl credentials for remote execution """
     def __init__(self, host='', userid='', generate_key=False):
         self.host = host
@@ -67,13 +67,15 @@ class SshCredentials():
                     privkey_file.write(self.get_private())
                 os.chmod(private_key_path, stat.S_IREAD + stat.S_IWRITE)
 
-class SshSession():
+class SSHSession():
     """ Class wrapping ssh operations """
     def __init__(self, ssh_data=None, credentials_path=None):
         if ssh_data is None:
-            self.ssh_data = SshCredentials(credentials_path is None)
+            self.ssh_data = SSHCredentials(credentials_path is None)
             if credentials_path:
                 self.ssh_data.load_from_file(credentials_path)
+        else:
+            self.ssh_data = ssh_data
         self.ssh = SSHClient()
         self.ssh.set_missing_host_key_policy(AutoAddPolicy())
         #paramiko.common.logging.basicConfig(level=paramiko.common.DEBUG)

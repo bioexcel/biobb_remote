@@ -8,7 +8,7 @@ __date__ = "$08-March-2019  17:32:38$"
 import sys
 import argparse
 
-from ssh_session import SshSession
+from biobb_remote.ssh_session import SSHSession
 
 # COMMAND LINE ARGS
 ARGPARSER = argparse.ArgumentParser(
@@ -38,17 +38,22 @@ ARGPARSER.add_argument(
     help='Output file path'
 )
 
-class ScpService():
+class SCPService():
     """ Class wrapping scp_service following biobb_template"""
     def __init__(self, args):
         self.args = args
 
     def launch(self):
         """ Executes scp_service"""
-        session = SshSession(credentials_path=self.args.keys_path)
+        session = SSHSession(credentials_path=self.args.keys_path)
+        print(
+            self.args.operation,
+            self.args.input_file_path,            
+            self.args.output_file_path
+        )
         output_text = session.run_sftp(
             oper=self.args.operation,
-            input_file_path=self.args.input_file_path,
+            input_file_path=self.args.input_file_path,            
             output_file_path=self.args.output_file_path
         )
         if self.args.operation == 'file':
@@ -71,7 +76,7 @@ if __name__ == "__main__":
     if args.output_file_path is None and args.operation != 'file':
         sys.exit("scp_service: error: output_file_path is required ")
 
-    output = ScpService(args).launch()
+    output = SCPService(args).launch()
     if output:
         print(output)
         
