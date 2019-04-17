@@ -1,33 +1,39 @@
 #! /usr/bin/python3
-
+""" Command line utility for remote ssh command in biobb_remote"""
 __author__ = "gelpi"
 __date__ = "$08-March-2019 17:32:38$"
 
 import sys
-#import paramiko
-from paramiko import SSHClient, AutoAddPolicy, AuthenticationException
-from credentials import sshCredentials
+import argparse
+from biobb_remote.ssh_session import SSHSession
 
+ARGPARSER = argparse.ArgumentParser(
+    description='SSH command wapper for biobb_remote'
+)
+ARGPARSER.add_argument(
+    dest='command',
+    help='Remote command',
+    nargs='*'
+)
+ARGPARSER.add_argument(
+    '--keys_path',
+    dest='keys_path',
+    help='Credentials file path',
+    required=True
+)
 
-class sshExec():
-    def __init__(self, credentials_path, command):
-        self.command = command
-        self.ssh_data = sshCredentials()
-        self.ssh_data.load_from_file(credentials_path)
+class SSHCommand():
+    """ Class wrapping ssh_command following biobb_template"""
+    def __init__(self, args):
+        self.args = args
 
     def launch(self):
-        ssh = SSHClient()
-        ssh.set_missing_host_key_policy(AutoAddPolicy())
-        #paramiko.common.logging.basicConfig(level=paramiko.common.DEBUG)
-        try:
-            ssh.connect(self.ssh_data.host, username=self.ssh_data.userid, pkey=self.ssh_data.key, look_for_keys=False)
-        except AuthenticationException:
-            print("Authentication Error", file=sys.stderr)
-        (stdin, stdout, stderr) = ssh.exec_command(command)
+        """ Execute ssh command"""
+        session = SSHSession(credentials_path=self.args.keys_path)
+        (stdin, stdout, stderr) = session.run_command(' '.join(self.args.command))
         print(''.join(stdout))
         print(''.join(stderr), file=sys.stderr)
-        ssh.close()
-
 
 if __name__ == "__main__":
-    cmd = sshExec(sys.argv[1], sys.argv[2]).launch()
+    args = ARGPARSER.parse_args()
+    SSHCommand(args).launch()

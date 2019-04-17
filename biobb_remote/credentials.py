@@ -1,69 +1,96 @@
 #! /usr/bin/python3
+""" Module to handle ssh credentials (userid, host, private_keys) """
 
 __author__ = "gelpi"
 __date__ = "$08-March-2019 17:32:38$"
 
 import sys
-import pickle
-from io import StringIO
-from paramiko.rsakey import RSAKey
+import argparse
+from biobb_remote.ssh_session import SSHCredentials
+
+ARGPARSE = argparse.ArgumentParser(
+    description='Credentials manager for biobb_remote'
+)
+ARGPARSE.add_argument(
+    dest='operation',
+    help='Operation: create|get_pubkey',
+    choices=['create', 'get_pubkey', 'get_private']
+)
+ARGPARSE.add_argument(
+    '--user',
+    dest='userid',
+    help='User id'
+)
+ARGPARSE.add_argument(
+    '--host',
+    dest='hostname',
+    help='Host name'
+)
+ARGPARSE.add_argument(
+    '--pubkey_path',
+    dest='pubkey_path',
+    help='Public key file path'
+)
+ARGPARSE.add_argument(
+    '--nbits',
+    dest='nbits',
+    type=int,
+    default=2048,
+    help='Number of key bits'
+)
+ARGPARSE.add_argument(
+    '--keys_path',
+    dest='keys_path',
+    help='Credentials file path',
+    required=True
+)
+ARGPARSE.add_argument(
+    '--privkey_path',
+    dest='privkey_path',
+    help='Private key file path'
+)
 
 
-class sshCredentials():
-    """ Generation of ssl credentials for remote execution """
-    def __init__(self, host='', userid=''):
-        self.host = host
-        self.userid = userid
-        self.key = None
+class Credentials():
+    """ Class to wrap credentials management following biobb_template"""
+    def __init__(self, line_args):
+        self.args = line_args
 
-    def load_from_file(self, credentials_path):
-        try:
-            file = open(credentials_path, 'rb')
-            data = pickle.load(file)
-        except IOError as err:
-            print(err, file=sys.stderr)
-            sys.exit()
-        self.host = data['host']
-        self.userid = data['userid']
-        self.key = RSAKey.from_private_key(StringIO(data['key'].getvalue()))
+    def launch(self):
+        """ Launch execution following biobb_template"""
+        if self.args.operation == 'create':
+            credentials = SSHCredentials(
+                host=self.args.hostname,
+                userid=self.args.userid,
+                generate_key=False
+            )
+            credentials.generate_key(self.args.nbits)
+            credentials.save(
+                output_path=self.args.keys_path,
+                public_key_path=self.args.pubkey_path,
+                private_key_path=self.args.privkey_path
+            )
+            print("Credentials stored in", args.keys_path)
+            if self.args.pubkey_path is None:
+                print("Public key, add to authorized_keys on remote host")
+                print(credentials.get_public_str())
 
-    def set_login(self, host, userid):
-        self.host = host
-        self.userid = userid
-
-    def generate_key(self, nbits=2048):
-        self.key = RSAKey.generate(nbits)
-
-    def save(self, output_path='', public_key_path=None):
-        if output_path != '':
-            with open(output_path, 'wb') as keys_file:
-                private = StringIO()
-                self.key.write_private_key(private)
-                pickle.dump(
-                    {
-                        'userid': self.userid,
-                        'host': self.host,
-                        'data': private
-                    }, keys_file)
-            if public_key_path is not None:
-                with open(public_key_path, "w") as pubkey_file:
-                    pubkey_file.write(self.get_public_str())
+        else:
+            credentials = SSHCredentials()
+            credentials.load_from_file(self.args.keys_path)
+            if self.args.operation == 'get_pubkey':
+                print(credentials.get_public_str())
+            elif self.args.operation == 'get_private':
+                print(credentials.get_private())
             else:
-                print(self.get_public_str())
-
-    def get_public_str(self, suffix='@biobb'):
-        return '{} {} {}{}\n'.format(
-            self.key.get_name(), self.key.get_base64(), self.userid, suffix
-        )
+                sys.exit("credentials: error: unknown op")
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print("Usage: credentials host_name user_id credentials_file [public_key_file]")
-        sys.exit()
-    pkey_file_path = None
-    if len(sys.argv) == 5:
-        pkey_file_path = sys.argv[4]
 
-    credentials = sshCredentials(sys.argv[1], sys.argv[2])
-    credentials.generate_key()
-    credentials.save(sys.argv[3], pkey_file_path)
+    args = ARGPARSE.parse_args()
+
+    if args.operation == 'create':
+        if args.userid is None or args.hostname is None:
+            sys.exit("ssh_command: error: Userid and hostname are required to create credentials")
+
+    Credentials(args).launch()

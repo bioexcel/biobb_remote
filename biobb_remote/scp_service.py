@@ -1,52 +1,82 @@
 #! /usr/bin/python3
 
-# To change this license header, choose License Headers in Project Properties.
-# To change this template file, choose Tools | Templates
-# and open the template in the editor.
+""" Command-line wrapper to SCP for biobb_remote """
 
 __author__ = "gelpi"
 __date__ = "$08-March-2019  17:32:38$"
 
 import sys
-#import paramiko
-from paramiko import AuthenticationException
-from paramiko import AutoAddPolicy
-from paramiko import SSHClient
-from credentials import sshCredentials
+import argparse
 
+from biobb_remote.ssh_session import SSHSession
 
-class sshExec():
-    def __init__(self, oper, credFn, input_file_path, output_file_path):
-        self.ssh_data = sshCredentials()
-        self.ssh_data.load_from_file(credFn)
-        self.op = oper
-        self.input_file_path = input_file_path
-        self.output_file_path = output_file_path
+# COMMAND LINE ARGS
+ARGPARSER = argparse.ArgumentParser(
+    description='SCP wapper for biobb_remote'
+)
+ARGPARSER.add_argument(
+    dest='operation',
+    help='SCP command (get|put: Scp standard,'\
+        + 'create: creates text file on remote,'\
+        + 'file: prints text file on remote)',
+    choices=['get', 'put', 'create', 'file']
+)
+ARGPARSER.add_argument(
+    '--keys_path',
+    dest='keys_path',
+    help='Credentials file path',
+    required=True
+)
+ARGPARSER.add_argument(
+    '-i',
+    dest='input_file_path',
+    help='Input file path | input string'
+)
+ARGPARSER.add_argument(
+    '-o',
+    dest='output_file_path',
+    help='Output file path'
+)
+
+class SCPService():
+    """ Class wrapping scp_service following biobb_template"""
+    def __init__(self, args):
+        self.args = args
 
     def launch(self):
-        ssh = SSHClient()
-        ssh.set_missing_host_key_policy(AutoAddPolicy())
-        #paramiko.common.logging.basicConfig(level=paramiko.common.DEBUG)
-        try:
-            ssh.connect(
-                self.ssh_data.host,
-                username=self.ssh_data.userid,
-                pkey=self.ssh_data.key,
-                look_for_keys=False
-            )
-        except AuthenticationException:
-            sys.stderr.write("Authentication Error\n")
-        sftp = ssh.open_sftp()
-        try:
-            if self.op == 'get':
-                sftp.get(self.input_file_path, self.output_file_path)
-            elif self.op == 'put':
-                sftp.put(self.input_file_path, self.output_file_path)
-        except IOError as err:
-            print(err)
-
-        ssh.close()
-
+        """ Executes scp_service"""
+        session = SSHSession(credentials_path=self.args.keys_path)
+        print(
+            self.args.operation,
+            self.args.input_file_path,            
+            self.args.output_file_path
+        )
+        output_text = session.run_sftp(
+            oper=self.args.operation,
+            input_file_path=self.args.input_file_path,            
+            output_file_path=self.args.output_file_path
+        )
+        if self.args.operation == 'file':
+            return output_text
+        return ''
+    
 
 if __name__ == "__main__":
-    cmd = sshExec(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]).launch()
+    args = ARGPARSER.parse_args()
+    # Chaching stdin
+    if args.input_file_path is None:
+        if args.operation != 'create':
+            sys.exit("scp_service: error: input_file_path is required ")
+        else:
+            args.input_file_path = ''
+            line = sys.stdin.readline()
+            while line:
+                args.input_file_path += line
+                line = sys.stdin.readline()
+    if args.output_file_path is None and args.operation != 'file':
+        sys.exit("scp_service: error: output_file_path is required ")
+
+    output = SCPService(args).launch()
+    if output:
+        print(output)
+        
