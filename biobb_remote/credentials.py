@@ -70,7 +70,7 @@ class Credentials():
                 public_key_path=self.args.pubkey_path,
                 private_key_path=self.args.privkey_path
             )
-            print("Credentials stored in", args.keys_path)
+            print("Credentials stored in", self.args.keys_path)
             if self.args.pubkey_path is None:
                 print("Public key, add to authorized_keys on remote host")
                 print(credentials.get_public_str())
@@ -85,8 +85,7 @@ class Credentials():
             else:
                 sys.exit("credentials: error: unknown op")
 
-if __name__ == "__main__":
-
+def main():
     args = ARGPARSE.parse_args()
 
     if args.operation == 'create':
@@ -94,3 +93,6 @@ if __name__ == "__main__":
             sys.exit("ssh_command: error: Userid and hostname are required to create credentials")
 
     Credentials(args).launch()
+
+if __name__ == '__main__':
+    main()

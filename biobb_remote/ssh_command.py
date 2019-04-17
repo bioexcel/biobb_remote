@@ -34,6 +34,9 @@ class SSHCommand():
         print(''.join(stdout))
         print(''.join(stderr), file=sys.stderr)
 
-if __name__ == "__main__":
+def main():
     args = ARGPARSER.parse_args()
     SSHCommand(args).launch()
+
+if __name__ == "__main__":
+    main()

@@ -1,9 +1,9 @@
 #!/usr/bin/python3
-""" Test for slurm remote interface """
+""" Test script for slurm remote interface """
 
 import sys
 import argparse
-from biobb_remote.slurm_sl1 import SlurmSL1
+from biobb_remote.slurm import Slurm
 
 ARGPARSER = argparse.ArgumentParser(
     description='Test Slurm script for biobb_remote'
@@ -54,18 +54,18 @@ ARGPARSER.add_argument(
 class Slurm_test():
     def __init__(self, args):
         self.args = args
-        
+
     def launch(self):
-        slurm_task = SlurmSL1()
+        slurm_task = Slurm()
         slurm_task.set_credentials(self.args.keys_path)
-        
+
         if self.args.command != 'queue':
             try:
                 slurm_task.load_data_from_file(self.args.task_file_path)
                 print("Task data loaded from", self.args.task_file_path)
             except IOError:
                 print("Task data not loaded")
-        
+
         if self.args.command == 'submit':
             slurm_task.set_settings(self.args.q_settings)
             slurm_task.set_modules(self.args.module)
@@ -102,15 +102,16 @@ class Slurm_test():
 
         else:
             sys.exit("test_slurm: error: unknown command " + self.args.command)
-        
+
         if slurm_task.modified:
             try:
                 slurm_task.save(args.task_file_path)
                 print("Task data saved on", args.task_file_path)
             except IOError as e:
                 sys.exit(e)
-        
-if __name__ == '__main__':
+def main():
     args = ARGPARSER.parse_args()
     stest = Slurm_test(args).launch()
-    
+
+if __name__ == '__main__':
+    main()

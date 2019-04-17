@@ -48,20 +48,20 @@ class SCPService():
         session = SSHSession(credentials_path=self.args.keys_path)
         print(
             self.args.operation,
-            self.args.input_file_path,            
+            self.args.input_file_path,
             self.args.output_file_path
         )
         output_text = session.run_sftp(
             oper=self.args.operation,
-            input_file_path=self.args.input_file_path,            
+            input_file_path=self.args.input_file_path,
             output_file_path=self.args.output_file_path
         )
         if self.args.operation == 'file':
             return output_text
         return ''
-    
 
-if __name__ == "__main__":
+
+def main():
     args = ARGPARSER.parse_args()
     # Chaching stdin
     if args.input_file_path is None:
@@ -79,4 +79,6 @@ if __name__ == "__main__":
     output = SCPService(args).launch()
     if output:
         print(output)
-        
+
+if __name__ == "__main__":
+    main()
