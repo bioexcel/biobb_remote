@@ -1,4 +1,4 @@
-
+""" Task adjusted to SLURM manager"""
 
 from biobb_remote.task import Task
 
@@ -67,7 +67,6 @@ MODULES = {
     }
 }
 
-
 class Slurm(Task):
     def __init__(self):
         Task.__init__(self)
@@ -86,9 +85,6 @@ class Slurm(Task):
             self.task_data['queue_settings'] = QSETTINGS[host][QSETTINGS[host]['default']]
         else:
             self.task_data['queue_settings'] = QSETTINGS[host][setting_id]
-
-
-
 
     def get_queue_settings_ar(self):
         scr_lines = []

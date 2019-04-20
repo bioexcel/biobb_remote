@@ -60,10 +60,9 @@ class SCPService():
             return output_text
         return ''
 
-
 def main():
     args = ARGPARSER.parse_args()
-    # Chaching stdin
+    # Caching stdin
     if args.input_file_path is None:
         if args.operation != 'create':
             sys.exit("scp_service: error: input_file_path is required ")

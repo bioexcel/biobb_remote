@@ -26,8 +26,7 @@ class SSHCredentials():
             file = open(credentials_path, 'rb')
             data = pickle.load(file)
         except IOError as err:
-            print(err, file=sys.stderr)
-            sys.exit()
+            sys.exit(err)
         self.host = data['host']
         self.userid = data['userid']
         self.key = RSAKey.from_private_key(StringIO(data['data'].getvalue()))

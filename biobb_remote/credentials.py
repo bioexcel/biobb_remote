@@ -50,7 +50,6 @@ ARGPARSE.add_argument(
     help='Private key file path'
 )
 
-
 class Credentials():
     """ Class to wrap credentials management following biobb_template"""
     def __init__(self, line_args):
@@ -74,7 +73,6 @@ class Credentials():
             if self.args.pubkey_path is None:
                 print("Public key, add to authorized_keys on remote host")
                 print(credentials.get_public_str())
-
         else:
             credentials = SSHCredentials()
             credentials.load_from_file(self.args.keys_path)

@@ -9,6 +9,11 @@ import json
 from biobb_remote.ssh_session import SSHCredentials, SSHSession
 from biobb_remote.data_bundle import DataBundle
 
+UNKNOWN = 0
+RUNNING = 1
+CANCELLED = 2
+FINISHED = 3
+
 class Task():
     """ Classe to handle task execution """
     def __init__(self):
@@ -25,12 +30,7 @@ class Task():
             file = open(file_path, 'rb')
             self.task_data = pickle.load(file)
             self.id = self.task_data['id']
-            
-#    def load_data_from_json(self, json_path):
-#        with open(file_path, 'r') as task_file:
-#            self.task_data = json.load(file)
-#            self.id = self.task_data['id']
-    
+      
     def set_credentials(self, credentials_path):
         self.ssh_data.load_from_file(credentials_path)
 
@@ -60,13 +60,21 @@ class Task():
         self.task_data['remote_script'] = self._remote_wdir() + '/run_script.sh'
         ssh.run_sftp('create', self.prepare_queue_script(), self.task_data['remote_script'])
         (stdin, stdout, stderr) = ssh.run_command(
-            self.commands['submit'] + ' '\
-                + self.task_data['remote_script'])
+            self.commands['submit'] + ' ' + self.task_data['remote_script']
+        )
         self.task_data['remote_job_id'] = self.get_submitted_job_id(''.join(stdout))
+        self.status = SUBMITTED
     
     def cancel(self):
-        pass
-
+        if not self.ssh_data:
+            print("No credentials")
+            return
+        ssh = SSHSession(ssh_data=self.ssh_data)
+        (stdin, stdout, stderr) = ssh.run_command(
+            self.commands['cancel'] + ' ' + self.task_data['remote_job_id']
+        )
+        self.task_data['status'] = CANCELLED
+  
     def check_queue(self):
         session = SSHSession(ssh_data=self.ssh_data)
         return session.run_command(self.commands['queue'])
@@ -103,5 +111,3 @@ class Task():
             self.ssh_data=None
             self.task_data['id'] = self.id
             pickle.dump(self.task_data, task_file)
-
-
