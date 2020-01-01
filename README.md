@@ -16,23 +16,21 @@ credentials [-h] [--user USERID] [--host HOSTNAME]
 ~~~
 
 ## scp_service
-
 Simple sftp service
 ~~~
 scp_service [-h] --keys_path KEYS_PATH [-i INPUT_FILE_PATH]
                    [-o OUTPUT_FILE_PATH]
                    {get,put,create,file,listdir}
 ~~~
+
 ## ssh_command
-
 Simple remote ssh command
-
 ~~~
 ssh_command [-h] --keys_path KEYS_PATH [command [command ...]]
 ~~~
 
 ## slurm_test
-Complete set of functions to manage slurm queues remotely
+Complete set of functions to manage slurm submissions remotely
 ~~~
 slurm_test [-h] --keys_path KEYS_PATH [--script SCRIPT_PATH]
                   [--local_data LOCAL_DATA_PATH] [--remote REMOTE_PATH]
@@ -40,6 +38,7 @@ slurm_test [-h] --keys_path KEYS_PATH [--script SCRIPT_PATH]
                   [--task_data TASK_FILE_PATH]
                   {submit,queue,cancel,status,get_data,put_data}
 ~~~
+
 ### Version
 v0.1.0 December 2019
 
