@@ -108,6 +108,8 @@ class SSHSession():
             elif oper == 'file':
                 with sftp.file(input_file_path, "r") as remote_file:
                     return remote_file.read().decode()
+            elif oper == "listdir":
+                return sftp.listdir(output_file_path)
             else:
                 print('Unknown sftp command', oper)
                 return True

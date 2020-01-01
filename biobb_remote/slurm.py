@@ -1,5 +1,7 @@
 """ Task adjusted to SLURM manager"""
 
+import sys
+
 from biobb_remote.task import Task
 
 SLURM_COMMANDS = {
@@ -73,7 +75,7 @@ class Slurm(Task):
         self.commands = SLURM_COMMANDS
 
     def set_modules(self, host, module_set):
-        if module_set in MODULES:
+        if module_set in MODULES[host]:
             self.task_data['modules'] = MODULES[host][module_set]
         else:
             sys.exit('slurm: error: module set unknown')
@@ -97,6 +99,6 @@ class Slurm(Task):
             )
         return scr_lines
 
-def get_submitted_job_id(submit_output):
-    wds = submit_output.split(' ')
-    return wds[3]
+    def get_submitted_job_id(self, submit_output):
+        wds = submit_output.split(' ')
+        return wds[3].strip('\n')

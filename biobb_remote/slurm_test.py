@@ -59,16 +59,15 @@ class Slurm_test():
         slurm_task = Slurm()
         slurm_task.set_credentials(self.args.keys_path)
 
-        if self.args.command != 'queue':
+        if self.args.command not in ('queue', 'submit'):
             try:
                 slurm_task.load_data_from_file(self.args.task_file_path)
                 print("Task data loaded from", self.args.task_file_path)
             except IOError:
                 print("Task data not loaded")
-
         if self.args.command == 'submit':
-            slurm_task.set_settings(self.args.q_settings)
-            slurm_task.set_modules(self.args.module)
+            slurm_task.set_settings(slurm_task.ssh_data.host, self.args.q_settings)
+            slurm_task.set_modules(slurm_task.ssh_data.host, self.args.module)
             slurm_task.set_local_data(self.args.local_data_path)
             if not slurm_task.task_data['loaded']:
                 slurm_task.task_data['remote_base_path'] = self.args.remote_path
@@ -77,7 +76,9 @@ class Slurm_test():
             slurm_task.submit()
             print("job id", slurm_task.task_data['remote_job_id'])
         elif self.args.command == 'cancel':
-            print("TODO:cancel job")
+            slurm_task.cancel()
+            print('job ' + slurm_task.task_data['remote_job_id'] + '  cancelled')
+
         elif self.args.command == 'queue':
             (stdin, stdout, stderr) = slurm_task.check_queue()
             print(''.join(stdout))
@@ -89,10 +90,8 @@ class Slurm_test():
             print(''.join(stderr), file=sys.stderr)
 
         elif self.args.command == 'get_data':
-            if not slurm_task.task_data:
-                slurm_task.set_local_data(self.args.local_data_path)
-                slurm_task.task_data['remote_base_path'] = self.args.remote_path
-            print("TODO: get output data")
+            slurm_task.get_output_data(self.args.local_data_path, False)
+        
         elif self.args.command == 'put_data':
             if not slurm_task.task_data:
                 slurm_task.set_local_data(self.args.local_data_path)
@@ -104,9 +103,11 @@ class Slurm_test():
             sys.exit("test_slurm: error: unknown command " + self.args.command)
 
         if slurm_task.modified:
+            if not self.args.task_file_path:
+                self.args.task_file_path = slurm_task.id + ".task"
             try:
-                slurm_task.save(args.task_file_path)
-                print("Task data saved on", args.task_file_path)
+                slurm_task.save(self.args.task_file_path)
+                print("Task data saved on", self.args.task_file_path)
             except IOError as e:
                 sys.exit(e)
 def main():
