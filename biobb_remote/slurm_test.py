@@ -11,7 +11,7 @@ ARGPARSER = argparse.ArgumentParser(
 ARGPARSER.add_argument(
     dest='command',
     help='Remote command',
-    choices=['submit', 'queue', 'cancel', 'status', 'get_data', 'put_data']
+    choices=['submit', 'queue', 'cancel', 'status', 'get_data', 'put_data', 'logs']
 )
 ARGPARSER.add_argument(
     '--keys_path',
@@ -65,6 +65,7 @@ class Slurm_test():
                 print("Task data loaded from", self.args.task_file_path)
             except IOError:
                 print("Task data not loaded")
+        
         if self.args.command == 'submit':
             slurm_task.set_settings(slurm_task.ssh_data.host, self.args.q_settings)
             slurm_task.set_modules(slurm_task.ssh_data.host, self.args.module)
@@ -75,19 +76,18 @@ class Slurm_test():
                 slurm_task.send_input_data()
             slurm_task.submit()
             print("job id", slurm_task.task_data['remote_job_id'])
+            
         elif self.args.command == 'cancel':
-            slurm_task.cancel()
+            slurm_task.cancel(remove_data=True)
             print('job ' + slurm_task.task_data['remote_job_id'] + '  cancelled')
 
         elif self.args.command == 'queue':
-            (stdin, stdout, stderr) = slurm_task.check_queue()
+            stdin, stdout, stderr = slurm_task.check_queue()
             print(''.join(stdout))
             print(''.join(stderr), file=sys.stderr)
 
         elif self.args.command == 'status':
-            (stdin, stdout, stderr) = slurm_task.check_job()
-            print(''.join(stdout))
-            print(''.join(stderr), file=sys.stderr)
+            print(slurm_task.check_job())
 
         elif self.args.command == 'get_data':
             slurm_task.get_output_data(self.args.local_data_path, False)
@@ -97,6 +97,13 @@ class Slurm_test():
                 slurm_task.set_local_data(self.args.local_data_path)
                 slurm_task.task_data['remote_base_path'] = self.args.remote_path
             slurm_task.send_input_data()
+            
+        elif self.args.command == 'logs':
+            stdout, stderr = slurm_task.get_logs()
+            print("Job Output log")
+            print(stdout)
+            print("Jog Error log")
+            print(stderr)
 
         else:
             sys.exit("test_slurm: error: unknown command " + self.args.command)
@@ -109,6 +116,7 @@ class Slurm_test():
                 print("Task data saved on", self.args.task_file_path)
             except IOError as e:
                 sys.exit(e)
+
 def main():
     args = ARGPARSER.parse_args()
     stest = Slurm_test(args).launch()

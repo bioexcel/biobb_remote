@@ -125,17 +125,32 @@ class Task():
     def check_job(self):
         """ Checks job status """
         session = SSHSession(ssh_data=self.ssh_data)
-        return session.run_command(
-            self.commands['queue'] \
-            + ' -hv --job ' \
-            + self.task_data['remote_job_id']
-        )
+        old_status = self.task_data['status']
+        if self.task_data['status'] is not CANCELLED:
+            (stdin, stdout, stderr) = session.run_command(
+                self.commands['queue'] \
+                + ' -h --job ' \
+                + self.task_data['remote_job_id']
+            )
+            jobid, partition, name, user, st, time, nodes, nodelist = (''.join(stdout)).split()
+            if not st:
+                self.task_data['status'] = FINISHED
+            elif st == 'R':
+                self.task_data['status'] = RUNNING
+            self.modified = old_status != self.task_data['status']
+        else:
+            print("Job cancelled by user")
+        return self.task_data['status']
 
     def get_logs(self):
         """ Get specific queue logs"""
-        #TODO
-        pass
-
+        self.check_job()
+        session = SSHSession(ssh_data=self.ssh_data)
+        stdout = session.run_sftp('file', self._remote_wdir()+"/"+self.task_data['queue_settings']['stdout'])
+        stderr = session.run_sftp('file', self._remote_wdir()+"/"+self.task_data['queue_settings']['stderr'])
+        
+        return stdout, stderr
+        
     def send_input_data(self):
         """ Uploads data to remote working dir """
         session = SSHSession(ssh_data=self.ssh_data)
@@ -201,7 +216,6 @@ class Task():
             if 'output_data_bundle'  in self.task_data:
                 output_data_bundle = self.task_data['output_data_bundle']
                 self.task_data['output_data_bundle'] = json.dumps(output_data_bundle.__dict__)
-            print(self.task_data)
             with open(save_file_path, 'w') as task_file:
                 json.dump(self.task_data, task_file, indent=3)
             if 'local_data_bundle'  in self.task_data:
