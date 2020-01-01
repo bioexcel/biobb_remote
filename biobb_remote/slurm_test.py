@@ -69,7 +69,7 @@ class Slurm_test():
             slurm_task.set_settings(slurm_task.ssh_data.host, self.args.q_settings)
             slurm_task.set_modules(slurm_task.ssh_data.host, self.args.module)
             slurm_task.set_local_data(self.args.local_data_path)
-            if not slurm_task.task_data['loaded']:
+            if 'input_data_loaded' not in slurm_task.task_data:
                 slurm_task.task_data['remote_base_path'] = self.args.remote_path
                 slurm_task.task_data['script'] = self.args.script_path
                 slurm_task.send_input_data()
@@ -97,7 +97,6 @@ class Slurm_test():
                 slurm_task.set_local_data(self.args.local_data_path)
                 slurm_task.task_data['remote_base_path'] = self.args.remote_path
             slurm_task.send_input_data()
-            slurm_task.modified = True
 
         else:
             sys.exit("test_slurm: error: unknown command " + self.args.command)

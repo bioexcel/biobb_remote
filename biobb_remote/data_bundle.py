@@ -2,6 +2,7 @@
 
 import os
 import sys
+import json
 
 class DataBundle():
     def __init__(self, bundle_id):
@@ -19,3 +20,6 @@ class DataBundle():
     
     def get_file_names(self):
         return [os.path.basename(x) for x in self.files]
+    
+    def to_json(self):
+        return json.dumps(self)

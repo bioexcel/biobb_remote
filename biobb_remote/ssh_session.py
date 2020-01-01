@@ -92,7 +92,7 @@ class SSHSession():
         """ Runs SSH command on remote"""
         return self.ssh.exec_command(command)
 
-    def run_sftp(self, oper, input_file_path, output_file_path):
+    def run_sftp(self, oper, input_file_path, output_file_path=''):
         """ Runs SFTP session on remote"""
         sftp = self.ssh.open_sftp()
         try:
@@ -109,7 +109,7 @@ class SSHSession():
                 with sftp.file(input_file_path, "r") as remote_file:
                     return remote_file.read().decode()
             elif oper == "listdir":
-                return sftp.listdir(output_file_path)
+                return sftp.listdir(input_file_path)
             else:
                 print('Unknown sftp command', oper)
                 return True

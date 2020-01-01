@@ -19,7 +19,7 @@ ARGPARSER.add_argument(
     help='SCP command (get|put: Scp standard,'\
         + 'create: creates text file on remote,'\
         + 'file: prints text file on remote)',
-    choices=['get', 'put', 'create', 'file']
+    choices=['get', 'put', 'create', 'file', 'listdir']
 )
 ARGPARSER.add_argument(
     '--keys_path',

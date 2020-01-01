@@ -88,7 +88,7 @@ class Slurm(Task):
         else:
             self.task_data['queue_settings'] = QSETTINGS[host][setting_id]
 
-    def get_queue_settings_ar(self):
+    def get_queue_settings_string_array(self):
         scr_lines = []
         for key in self.task_data['queue_settings']:
             scr_lines.append(
