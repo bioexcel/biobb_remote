@@ -14,12 +14,14 @@ SUBMITTED = 1
 RUNNING = 2
 CANCELLED = 3
 FINISHED = 4
+CLOSING = 5
 JOB_STATUS = {
     UNKNOWN: 'Unknown',
     SUBMITTED: 'Submitted',
     RUNNING: 'Running',
     CANCELLED: 'Cancelled',
-    FINISHED: 'Finished'
+    FINISHED: 'Finished',
+    CLOSING: 'Closing'
 }
 
 class Task():
@@ -80,11 +82,9 @@ class Task():
         """ Uploads data to remote working dir """
         ssh = SSHSession(ssh_data=self.ssh_data)
         self.task_data['remote_base_path'] = remote_base_path
-        try:
-            ssh.run_command('mkdir ' + self.task_data['remote_base_path'])
-            ssh.run_command('mkdir ' + self._remote_wdir())
-        except:
-            sys.exit('Error while creating remote base directory')
+        stdout, stderr = ssh.run_command('mkdir -p ' + self._remote_wdir())
+        if stderr:
+            sys.exit('Error while creating remote working directory: ' + stderr)
         
         if self.task_data['local_data_bundle']:
             for file_path in self.task_data['local_data_bundle'].files:
@@ -142,6 +142,7 @@ class Task():
         self.task_data['remote_job_id'] = self.get_submitted_job_id(stdout)
         self.task_data['status'] = SUBMITTED
         self.modified = True
+        print('Submitted job {}'.format(self.task_data['remote_job_id']))
         #TODO polling 
         
     def get_submitted_job_id(self):
@@ -158,8 +159,9 @@ class Task():
             stdout, stderr = ssh.run_command(
                 self.commands['cancel'] + ' ' + self.task_data['remote_job_id']
             )
+            print("Job {} cancelled".format(self.task_data['remote_job_id']))
             if remove_data:
-                print("Removing remote data")
+                print("Removing remote data for job {}".format(self.task_data['remote_job_id']))
                 ssh.run_command('rm -rf ' + self._remote_wdir())
             self.task_data['status'] = CANCELLED
             self.modified = True
@@ -169,7 +171,8 @@ class Task():
     def check_queue(self):
         """ Check queue status """
         ssh = SSHSession(ssh_data=self.ssh_data)
-        return ssh.run_command(self.commands['queue'])
+        stdout, stderr = ssh.run_command(self.commands['queue'])
+        return stdout
 
     def check_job(self):
         """ Checks job status """
@@ -186,14 +189,19 @@ class Task():
                 self.task_data['status'] = FINISHED
             elif st == 'R':
                 self.task_data['status'] = RUNNING
+            elif st == 'CG':
+                self.task_data['status'] = CLOSING
+            elif st == 'PD':
+                self.task_data['status'] = SUBMITTED
             self.modified = old_status != self.task_data['status']
         else:
             print("Job cancelled by user")
-        return "Job {} {}".format(self.task_data['remote_job_id'], JOB_STATUS[self.task_data['status']])
+        return "Job {} is {}".format(self.task_data['remote_job_id'], JOB_STATUS[self.task_data['status']])
 
     def get_remote_file(self, file):
         """ Get file from remote working dir"""
         ssh = SSHSession(ssh_data=self.ssh_data)
+        #TODO check remote file exists
         return ssh.run_sftp('file', self._remote_wdir() + "/" + file)
         
     def get_logs(self):

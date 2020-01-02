@@ -115,6 +115,7 @@ class SSHSession():
             else:
                 print('Unknown sftp command', oper)
                 return True
+        #TODO check appropriate errors
         except IOError as err:
             sys.exit(err)
         return False
