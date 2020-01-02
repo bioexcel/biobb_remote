@@ -9,11 +9,11 @@ sl1.bsc.es:
         time: -t, 
         job: -J, 
         stdout: -o 
-        stderr: -e, 
-        qos: --qos=, 
-        gres: --gres=,
+        stderr: -e 
+        qos: --qos=
+        gres: --gres=
         ntasks: --ntasks=
-        cpus-per-task: --cpus-per-task,
+        cpus-per-task: --cpus-per-task
         ntasks-per-node: --ntasks-per-node= 
         nodes: --nodes=
     QUEUE_SETTINGS:
