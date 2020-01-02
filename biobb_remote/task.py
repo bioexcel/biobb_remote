@@ -14,6 +14,13 @@ SUBMITTED = 1
 RUNNING = 2
 CANCELLED = 3
 FINISHED = 4
+JOB_STATUS = {
+    UNKNOWN: 'Unknown',
+    SUBMITTED: 'Submitted',
+    RUNNING: 'Running',
+    CANCELLED: 'Cancelled',
+    FINISHED: 'Finished'
+}
 
 class Task():
     """ Classe to handle task execution """
@@ -47,53 +54,95 @@ class Task():
             sys.exit("ERROR: file type ({}) not supported".format(mode))
         self.id = self.task_data['id']
 
-    def set_credentials(self, credentials_path):
+    def set_credentials(self, credentials):
         """ Loads ssh credentials from external file"""
-        self.ssh_data.load_from_file(credentials_path)
+        if isinstance(credentials, SSHCredentials):
+            self.ssh_data = credentials
+        else:
+            self.ssh_data.load_from_file(credentials)
+        
+    def set_modules(self, module_set):
+        """ Developed in inherited classes"""
+        pass
+    
+    def set_queue_settings(self, settings):
+        """ Developed in inherited classes"""
+        pass
 
-    def set_local_data(self, local_data_path):
-        """ Builds local data bundle """
+    def set_local_data_bundle(self, local_data_path):
+        """ Builds local data bundle from local directory"""
         self.task_data['local_data_bundle'] = DataBundle(self.id)
         self.task_data['local_data_bundle'].add_dir(local_data_path)
         self.task_data['local_data_path'] = local_data_path
         self.modified = True
 
-    def prepare_queue_script(self):
-        """ Generates remote script inclunding queue settings"""
-        self.task_data['queue_settings']['job'] = self.id
-        self.task_data['queue_settings']['stdout'] = 'job.out'
-        self.task_data['queue_settings']['stderr'] = 'job.err'
-        self.task_data['queue_settings']['working_dir'] = self._remote_wdir()
+    def send_input_data(self, remote_base_path):
+        """ Uploads data to remote working dir """
+        ssh = SSHSession(ssh_data=self.ssh_data)
+        self.task_data['remote_base_path'] = remote_base_path
+        try:
+            ssh.run_command('mkdir ' + self.task_data['remote_base_path'])
+            ssh.run_command('mkdir ' + self._remote_wdir())
+        except:
+            sys.exit('Error while creating remote base directory')
+        
+        if self.task_data['local_data_bundle']:
+            for file_path in self.task_data['local_data_bundle'].files:
+                remote_file_path = self._remote_wdir() + '/' + os.path.basename(file_path)
+                ssh.run_sftp('put', file_path, remote_file_path)
+                print("sending_file: {} -> {}".format(file_path, remote_file_path))
+        else:
+            sys.exit("Error: Create input data bundle first")
+            
+        self.task_data['input_data_loaded'] = True
+        self.modified = True
+
+    def prepare_queue_script(self, queue_settings, modules):
+        """ Generates remote script including queue settings"""
+
+        self.set_queue_settings(queue_settings)
+        self.set_modules(modules)
+        
+        self.task_data['queue_settings'] = {
+            'job': self.id,
+            'stdout': 'job.out',
+            'stderr': 'job.err',
+            'working_dir': self._remote_wdir()
+        }
         scr_lines = ["#!/bin/sh"]
         scr_lines += self.get_queue_settings_string_array()
         for mod in self.task_data['modules']:
             scr_lines.append('module load ' + mod)
-        with open(self.task_data['script'], 'r') as scr_file:
+        with open(self.task_data['local_run_script'], 'r') as scr_file:
             script = '\n'.join(scr_lines) + '\n' + scr_file.read()
         return script
     
     def get_queue_settings_string_array(self):
         """ Generates queue settings to include in script
-            Developed in specific queue classes 
+            Developed in inherited queue classes 
         """
         return []
 
-    def submit(self, wait=False):
+    def submit(self, queue_settings, modules, local_run_script, wait=False):
         """ Submits task """
         if not self.ssh_data:
             print("ERROR: No credentials")
             return
         ssh = SSHSession(ssh_data=self.ssh_data)
-        self.task_data['remote_script'] = self._remote_wdir() + '/run_script.sh'
-        ssh.run_sftp('create', self.prepare_queue_script(), self.task_data['remote_script'])
-        (stdin, stdout, stderr) = ssh.run_command(
-            self.commands['submit'] + ' ' + self.task_data['remote_script']
+        self.task_data['local_run_script'] = local_run_script
+        self.task_data['remote_run_script'] = self._remote_wdir() + '/run_script.sh'
+        ssh.run_sftp(
+            'create', 
+            self.prepare_queue_script(queue_settings, modules),
+            self.task_data['remote_run_script']
         )
-        self.task_data['remote_job_id'] = self.get_submitted_job_id(
-            ''.join(stdout)
+        stdout, stderr = ssh.run_command(
+            self.commands['submit'] + ' ' + self.task_data['remote_run_script']
         )
+        self.task_data['remote_job_id'] = self.get_submitted_job_id(stdout)
         self.task_data['status'] = SUBMITTED
         self.modified = True
+        #TODO polling 
         
     def get_submitted_job_id(self):
         """ Reports job id after submission, developed in inherited classes """
@@ -106,7 +155,7 @@ class Task():
             return
         if self.task_data['status'] in [SUBMITTED, RUNNING]:
             ssh = SSHSession(ssh_data=self.ssh_data)
-            (stdin, stdout, stderr) = ssh.run_command(
+            stdout, stderr = ssh.run_command(
                 self.commands['cancel'] + ' ' + self.task_data['remote_job_id']
             )
             if remove_data:
@@ -119,20 +168,20 @@ class Task():
 
     def check_queue(self):
         """ Check queue status """
-        session = SSHSession(ssh_data=self.ssh_data)
-        return session.run_command(self.commands['queue'])
+        ssh = SSHSession(ssh_data=self.ssh_data)
+        return ssh.run_command(self.commands['queue'])
 
     def check_job(self):
         """ Checks job status """
-        session = SSHSession(ssh_data=self.ssh_data)
+        ssh = SSHSession(ssh_data=self.ssh_data)
         old_status = self.task_data['status']
         if self.task_data['status'] is not CANCELLED:
-            (stdin, stdout, stderr) = session.run_command(
+            stdout, stderr = ssh.run_command(
                 self.commands['queue'] \
                 + ' -h --job ' \
                 + self.task_data['remote_job_id']
             )
-            jobid, partition, name, user, st, time, nodes, nodelist = (''.join(stdout)).split()
+            jobid, partition, name, user, st, time, nodes, nodelist = stdout.split()
             if not st:
                 self.task_data['status'] = FINISHED
             elif st == 'R':
@@ -140,32 +189,21 @@ class Task():
             self.modified = old_status != self.task_data['status']
         else:
             print("Job cancelled by user")
-        return self.task_data['status']
+        return "Job {} {}".format(self.task_data['remote_job_id'], JOB_STATUS[self.task_data['status']])
 
+    def get_remote_file(self, file):
+        """ Get file from remote working dir"""
+        ssh = SSHSession(ssh_data=self.ssh_data)
+        return ssh.run_sftp('file', self._remote_wdir() + "/" + file)
+        
     def get_logs(self):
         """ Get specific queue logs"""
         self.check_job()
-        session = SSHSession(ssh_data=self.ssh_data)
-        stdout = session.run_sftp('file', self._remote_wdir()+"/"+self.task_data['queue_settings']['stdout'])
-        stderr = session.run_sftp('file', self._remote_wdir()+"/"+self.task_data['queue_settings']['stderr'])
+        stdout = self.get_remote_file(self.task_data['queue_settings']['stdout'])
+        stderr = self.get_remote_file(self.task_data['queue_settings']['stderr'])
         
         return stdout, stderr
-        
-    def send_input_data(self):
-        """ Uploads data to remote working dir """
-        session = SSHSession(ssh_data=self.ssh_data)
-        if self.task_data['remote_base_path']:
-            session.run_command('mkdir ' + self.task_data['remote_base_path'])
-            session.run_command('mkdir ' + self._remote_wdir())
-        else:
-            sys.exit('task_send_data: error: remote base path not provided')
-        if self.task_data['local_data_bundle']:
-            for file_path in self.task_data['local_data_bundle'].files:
-                remote_file_path = self._remote_wdir() + '/' + os.path.basename(file_path)
-                session.run_sftp('put', file_path, remote_file_path)
-                print("sending_file: {} -> {}".format(file_path, remote_file_path))
-        self.task_data['input_data_loaded'] = True
-        self.modified = True
+ 
 
     def get_output_data(self, local_data_path='', overwrite=False):
         """ Downloads remote working dir contents to local """

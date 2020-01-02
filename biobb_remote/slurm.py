@@ -74,13 +74,15 @@ class Slurm(Task):
         Task.__init__(self)
         self.commands = SLURM_COMMANDS
 
-    def set_modules(self, host, module_set):
+    def set_modules(self, module_set):
+        host = self.ssh_data.host
         if module_set in MODULES[host]:
             self.task_data['modules'] = MODULES[host][module_set]
         else:
             sys.exit('slurm: error: module set unknown')
 
-    def set_settings(self, host, setting_id='default'):
+    def set_queue_settings(self, setting_id='default'):
+        host = self.ssh_data.host
         if setting_id is None:
             setting_id = 'serial'
         if setting_id == 'default':

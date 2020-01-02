@@ -90,8 +90,10 @@ class SSHSession():
 
     def run_command(self, command):
         """ Runs SSH command on remote"""
-        return self.ssh.exec_command(command)
-
+        stdin, stdout, stderr = self.ssh.exec_command(command)
+        return ''.join(stdout), ''.join(stderr)
+    
+    
     def run_sftp(self, oper, input_file_path, output_file_path=''):
         """ Runs SFTP session on remote"""
         sftp = self.ssh.open_sftp()
