@@ -6,7 +6,7 @@ import sys
 import os
 import stat
 import pickle
-#import paramiko
+import paramiko
 from io import StringIO
 from paramiko import SSHClient, AutoAddPolicy, AuthenticationException, RSAKey
 
@@ -86,14 +86,15 @@ class SSHSession():
                 look_for_keys=False
             )
         except AuthenticationException:
-            print("Authentication Error", file=sys.stderr)
+            sys.exit("Authentication Error")
 
     def run_command(self, command):
         """ Runs SSH command on remote"""
-        stdin, stdout, stderr = self.ssh.exec_command(command)
+        if self.ssh:
+            stdin, stdout, stderr = self.ssh.exec_command(command)
         return ''.join(stdout), ''.join(stderr)
-    
-    
+
+
     def run_sftp(self, oper, input_file_path, output_file_path=''):
         """ Runs SFTP session on remote"""
         sftp = self.ssh.open_sftp()

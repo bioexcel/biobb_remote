@@ -30,9 +30,11 @@ class SSHCommand():
     def launch(self):
         """ Execute ssh command"""
         session = SSHSession(credentials_path=self.args.keys_path)
-        stdout, stderr = session.run_command(' '.join(self.args.command))
-        print(''.join(stdout))
-        print(''.join(stderr), file=sys.stderr)
+        if session:
+            stdout, stderr = session.run_command(' '.join(self.args.command))
+            print(''.join(stdout))
+            print(''.join(stderr), file=sys.stderr)
+
 
 def main():
     args = ARGPARSER.parse_args()
