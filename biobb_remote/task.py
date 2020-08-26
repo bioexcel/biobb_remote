@@ -6,7 +6,8 @@ import uuid
 import pickle
 import json
 
-from biobb_remote.ssh_session import SSHCredentials, SSHSession
+from biobb_remote.ssh_session import SSHSession
+from biobb_remote.ssh_credentials import SSHCredentials
 from biobb_remote.data_bundle import DataBundle
 
 UNKNOWN = 0

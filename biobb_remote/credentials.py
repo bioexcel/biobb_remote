@@ -7,7 +7,7 @@ __date__ = "$08-March-2019 17:32:38$"
 import sys
 import argparse
 import os
-from biobb_remote.ssh_session import SSHCredentials
+from biobb_remote.ssh_credentials import SSHCredentials
 import paramiko
 from paramiko import SSHClient, AutoAddPolicy, AuthenticationException
 
@@ -87,58 +87,26 @@ class Credentials():
                 print(credentials.get_private())
 
             elif self.args.operation in ('host_install', 'host_remove', 'host_check'):
-                # Opening a ssh session with user's credentials
-                user_ssh = SSHClient()
-                user_ssh.set_missing_host_key_policy(AutoAddPolicy())
-                #paramiko.common.logging.basicConfig(level=paramiko.common.DEBUG)
-                try:
-                    user_ssh.connect(
-                        credentials.host,
-                        username=credentials.userid,
-                    )
-                except AuthenticationException:
-                    sys.exit("Authentication Error using user's credentials")
-
-                sftp = user_ssh.open_sftp()
-                sftp.chdir('.ssh')
-
-                remote_auth_keys = []
-
-                with sftp.file('authorized_keys', mode='r') as ak_file:
-                    remote_auth_keys = ak_file.readlines()
-
-                pub_key = credentials.get_public_str()
                 host_str = '{}@{}'.format(credentials.userid, credentials.host)
 
                 if self.args.operation == 'host_check':
                     print('Biobb public key {} at {}'.format(
-                        'found' if (pub_key in remote_auth_keys) else 'not found',
+                        'found' if credentials.check_host_auth() else 'not found',
                         host_str
                     )
                     )
-                else:
-                    write_ak_ok = False
-                    if self.args.operation == 'host_install' and pub_key not in remote_auth_keys:
-                        with sftp.file('authorized_keys.bck', 'w') as bck_file:
-                            bck_file.writelines(remote_auth_keys)
+                elif self.args.operation == 'host_install':
+                    if not credentials.check_host_auth():
+                        credentials.install_host_auth('bck')
+                        print('Biobb keys installed on', host_str)
                         print("Warning: original .ssh/authorize_keys file stored as .ssh/authorized_keys.bck")
 
-                        new_keys = remote_auth_keys + [pub_key]
-                        write_ak_ok = True
-
-                    elif self.args.operation == 'host_remove' and pub_key in remote_auth_keys:
-                        with sftp.file('authorized_keys.biobb', 'w') as bck_file:
-                            bck_file.writelines(remote_auth_keys)
-
-                        new_keys = [line for line in remote_auth_keys if line != pub_key]
-                        print("Warning: .ssh/authorize_keys file stored as .ssh/authorized_keys.biobb")
+                elif self.args.operation == 'host_remove':
+                    print(credentials.check_host_auth())
+                    if credentials.check_host_auth():
+                        credentials.remove_host_auth('biobb')
                         print('Biobb removed from ', host_str)
-                        write_ak_ok = True
-
-                    if write_ak_ok:
-                        with sftp.file('authorized_keys', mode='w') as ak_file:
-                            ak_file.writelines(new_keys)
-
+                        print("Warning: .ssh/authorize_keys file stored as .ssh/authorized_keys.biobb")
             else:
                 sys.exit("credentials: error: unknown op")
 

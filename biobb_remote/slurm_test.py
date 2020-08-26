@@ -117,10 +117,8 @@ class Slurm_test():
             slurm_task.get_output_data(self.args.local_data_path, False)
         
         elif self.args.command == 'put_data':
-            if not slurm_task.task_data:
-                slurm_task.set_local_data(self.args.local_data_path)
-                slurm_task.task_data['remote_base_path'] = self.args.remote_path
-            slurm_task.send_input_data()
+            slurm_task.set_local_data_bundle(self.args.local_data_path)
+            slurm_task.send_input_data(self.args.remote_path)
             
         elif self.args.command == 'logs':
             stdout, stderr = slurm_task.get_logs()
