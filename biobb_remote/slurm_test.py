@@ -110,7 +110,7 @@ class Slurm_test():
             print(''.join(stderr), file=sys.stderr)
 
         elif self.args.command == 'status':
-            print(slurm_task.check_job())
+            slurm_task.check_job()
 
         elif self.args.command == 'get_data':
             slurm_task.get_output_data(self.args.local_data_path, False)

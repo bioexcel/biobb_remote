@@ -5,6 +5,7 @@ import sys
 import uuid
 import pickle
 import json
+import time
 
 from biobb_remote.ssh_session import SSHSession
 from biobb_remote.ssh_credentials import SSHCredentials
@@ -89,6 +90,7 @@ class Task():
         
         if self.task_data['local_data_bundle']:
             remote_files = ssh.run_sftp('listdir', self._remote_wdir())
+            ##TODO overwrite based on file timestamp
             for file_path in self.task_data['local_data_bundle'].files:
                 remote_file_path = self._remote_wdir() + '/' + os.path.basename(file_path)
                 if overwrite or os.path.basename(file_path) not in remote_files:
@@ -134,7 +136,7 @@ class Task():
         """
         return []
 
-    def submit(self, queue_settings, modules, local_run_script, wait=False):
+    def submit(self, queue_settings, modules, local_run_script, poll_time=0):
         """ Submits task """
         if not self.ssh_data:
             print("ERROR: No credentials")
@@ -154,7 +156,9 @@ class Task():
         self.task_data['status'] = SUBMITTED
         self.modified = True
         print('Submitted job {}'.format(self.task_data['remote_job_id']))
-        #TODO polling 
+        if poll_time:
+            self.check_job(poll_time=poll_time)
+
         
     def get_submitted_job_id(self):
         """ Reports job id after submission, developed in inherited classes """
@@ -210,13 +214,19 @@ class Task():
             self.modified = old_status != self.task_data['status']
         return self.task_data['status']
     
-    def check_job(self, update=True):
-        if update:
-            self.check_job_status()
+    def check_job(self, update=True, poll_time=0):
+        self.check_job_status()
         if self.task_data['status'] is CANCELLED:
-            return ("Job cancelled by user")
+            print ("Job cancelled by user")
         else:
-            return "Job {} is {}".format(self.task_data['remote_job_id'], JOB_STATUS[self.task_data['status']])
+            if poll_time:
+                while self.check_job_status() != FINISHED:
+                    self._print_job_status()
+                    time.sleep(poll_time)
+            self._print_job_status()
+
+    def _print_job_status(self):
+            print("Job {} is {}".format(self.task_data['remote_job_id'], JOB_STATUS[self.task_data['status']]))
 
     def get_remote_file(self, file):
         """ Get file from remote working dir"""
@@ -294,6 +304,12 @@ class Task():
         else:
             sys.exit("ERROR: Mode ({}) not supported")
         self.modified = False
+        
+    def clean_remote(self):
+        session = SSHSession(ssh_data=self.ssh_data)
+        session.run_sftp('rmdir', self._remote_wdir())
+        del self.task_data['output_data_path']
+        del self.task_data['output_data_bundle']
 
     def _remote_wdir(self):
         """ Builds remote working directory """

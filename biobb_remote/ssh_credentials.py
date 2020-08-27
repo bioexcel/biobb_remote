@@ -74,20 +74,27 @@ class SSHCredentials():
         return self.get_public_key() in self.remote_auth_keys
     
     def install_host_auth(self, file_bck='bck'):
-        if not self.remote_auth_keys:
-            self._get_remote_auth_keys()
-        if file_bck:
-            self._put_remote_auth_keys(file_bck)
-        self.remote_auth_keys = self.remote_auth_keys + [self.get_public_key()]
-        self._put_remote_auth_keys()
+        if not self.check_host_auth():
+            if file_bck:
+                self._put_remote_auth_keys(file_bck)
+                print("Previous authorized keys backed up at", ".ssh/authorized_keys." + file_bck)
+            self.remote_auth_keys = self.remote_auth_keys + [self.get_public_key()]
+            self._put_remote_auth_keys()
+            print('Biobb Public key installed on host')
+        else:
+            print('Biobb Public key already authorized')
+                
     
     def remove_host_auth(self, file_bck='biobb'):
-        if not self.remote_auth_keys:
-            self._get_remote_auth_keys()
-        if file_bck:
-            self._put_remote_auth_keys(file_bck)
-        self.remote_auth_keys = [pkey for pkey in self.remote_auth_keys if pkey != self.get_public_key()]
-        self._put_remote_auth_keys()
+        if self.check_host_auth():
+            if file_bck:
+                self._put_remote_auth_keys(file_bck)
+                print("Previous authorized keys backed up at", ".ssh/authorized_keys." + file_bck)
+            self.remote_auth_keys = [pkey for pkey in self.remote_auth_keys if pkey != self.get_public_key()]
+            self._put_remote_auth_keys()
+            print("Biobb Public key removed from host")
+        else:
+            print("Biobb Public key not found")
     
     def _set_user_ssh_session(self, sftp=True):
         self.user_ssh = SSHClient()
