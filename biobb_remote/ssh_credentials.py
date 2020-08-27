@@ -18,7 +18,7 @@ class SSHCredentials():
         self.userid = userid
         self.key = None
         self.user_ssh = None
-        self.remote_auth_keys = None
+        self.remote_auth_keys = []
         if generate_key:
             self.generate_key()
 
@@ -37,12 +37,12 @@ class SSHCredentials():
         """ Generates new Private Key """
         self.key = RSAKey.generate(nbits)
 
-    def get_public_str(self, suffix='@biobb'):
+    def get_public_key(self, suffix='@biobb'):
         """ Returns a readable public key suitable to add to authorized_keys """
         return '{} {} {}{}\n'.format(
             self.key.get_name(), self.key.get_base64(), self.userid, suffix
         )
-    def get_private(self):
+    def get_private_key(self):
         """ Return a readable private key"""
         private = StringIO()
         self.key.write_private_key(private)
@@ -62,27 +62,31 @@ class SSHCredentials():
                     }, keys_file)
             if public_key_path:
                 with open(public_key_path, 'w') as pubkey_file:
-                    pubkey_file.write(self.get_public_str())
+                    pubkey_file.write(self.get_public_key())
             if private_key_path:
                 with open(private_key_path, 'w') as privkey_file:
-                    privkey_file.write(self.get_private())
+                    privkey_file.write(self.get_private_key())
                 os.chmod(private_key_path, stat.S_IREAD + stat.S_IWRITE)
 
     def check_host_auth(self):
         if not self.remote_auth_keys:
             self._get_remote_auth_keys()
-        return self.get_public_str() in self.remote_auth_keys
+        return self.get_public_key() in self.remote_auth_keys
     
     def install_host_auth(self, file_bck='bck'):
+        if not self.remote_auth_keys:
+            self._get_remote_auth_keys()
         if file_bck:
             self._put_remote_auth_keys(file_bck)
-        self.remote_auth_keys = self.remote_auth_keys + [self.get_public_str()]
+        self.remote_auth_keys = self.remote_auth_keys + [self.get_public_key()]
         self._put_remote_auth_keys()
     
     def remove_host_auth(self, file_bck='biobb'):
+        if not self.remote_auth_keys:
+            self._get_remote_auth_keys()
         if file_bck:
             self._put_remote_auth_keys(file_bck)
-        self.remote_auth_keys = [pkey for pkey in self.remote_auth_keys if pkey != self.get_public_str()]
+        self.remote_auth_keys = [pkey for pkey in self.remote_auth_keys if pkey != self.get_public_key()]
         self._put_remote_auth_keys()
     
     def _set_user_ssh_session(self, sftp=True):

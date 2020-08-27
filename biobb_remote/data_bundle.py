@@ -10,7 +10,8 @@ class DataBundle():
         self.files = []
 
     def add_file(self, file_path):
-        self.files.append(file_path)
+        if file_path not in self.files:
+            self.files.append(file_path)
 
     def add_dir(self, dir_path):
         try:

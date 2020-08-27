@@ -85,7 +85,6 @@ class Slurm_test():
     def launch(self):
         slurm_task = Slurm()
         slurm_task.set_credentials(self.args.keys_path)
-        print(self.args.task_file_path)
 
         if self.args.command not in ('queue', 'submit'):
             try:

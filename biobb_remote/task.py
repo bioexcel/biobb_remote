@@ -32,7 +32,7 @@ class Task():
         self.id = str(uuid.uuid4())
         #self.description = description
         self.ssh_data = SSHCredentials()
-        self.task_data = {}
+        self.task_data = {'id':self.id}
         self.commands = {}
         self.modified = False
 
@@ -79,7 +79,7 @@ class Task():
         self.task_data['local_data_path'] = local_data_path
         self.modified = True
 
-    def send_input_data(self, remote_base_path):
+    def send_input_data(self, remote_base_path, overwrite=True):
         """ Uploads data to remote working dir """
         ssh = SSHSession(ssh_data=self.ssh_data)
         self.task_data['remote_base_path'] = remote_base_path
@@ -88,34 +88,44 @@ class Task():
             sys.exit('Error while creating remote working directory: ' + stderr)
         
         if self.task_data['local_data_bundle']:
+            remote_files = ssh.run_sftp('listdir', self._remote_wdir())
             for file_path in self.task_data['local_data_bundle'].files:
                 remote_file_path = self._remote_wdir() + '/' + os.path.basename(file_path)
-                ssh.run_sftp('put', file_path, remote_file_path)
-                print("sending_file: {} -> {}".format(file_path, remote_file_path))
+                if overwrite or os.path.basename(file_path) not in remote_files:
+                    ssh.run_sftp('put', file_path, remote_file_path)
+                    print("sending_file: {} -> {}".format(file_path, remote_file_path))
         else:
             sys.exit("Error: Create input data bundle first")
             
         self.task_data['input_data_loaded'] = True
         self.modified = True
+    
+    def get_remote_py_script(self, python_import, files, command, properties=''):
+        cmd = python_import + "; " + command + "("
+        file_str = []
+        for file in files.keys():
+            file_str.append(file + "='" + files[file] + "'") 
+        cmd += ','.join(file_str)
+        if properties:
+            cmd += ", properties='" + json.dumps(properties) + "'"
+        cmd += ").launch()"
+        return '#script\npython -c "' + cmd + '"\n'
 
+      
     def prepare_queue_script(self, queue_settings, modules):
         """ Generates remote script including queue settings"""
 
         self.set_queue_settings(queue_settings)
         self.set_modules(modules)
-        
-        self.task_data['queue_settings'] = {
-            'job': self.id,
-            'stdout': 'job.out',
-            'stderr': 'job.err',
-            'working_dir': self._remote_wdir()
-        }
         scr_lines = ["#!/bin/sh"]
         scr_lines += self.get_queue_settings_string_array()
         for mod in self.task_data['modules']:
             scr_lines.append('module load ' + mod)
-        with open(self.task_data['local_run_script'], 'r') as scr_file:
-            script = '\n'.join(scr_lines) + '\n' + scr_file.read()
+        if self.task_data['local_run_script'].find('#') == -1:
+            with open(self.task_data['local_run_script'], 'r') as scr_file:
+                script = '\n'.join(scr_lines) + '\n' + scr_file.read()
+        else:
+            script = '\n'.join(scr_lines) + '\n' + self.task_data['local_run_script']
         return script
     
     def get_queue_settings_string_array(self):
@@ -172,10 +182,10 @@ class Task():
     def check_queue(self):
         """ Check queue status """
         ssh = SSHSession(ssh_data=self.ssh_data)
-        stdout, stderr = ssh.run_command(self.commands['queue'])
-        return stdout
+        data = ssh.run_command(self.commands['queue'])
+        return data
 
-    def check_job(self):
+    def check_job_status(self):
         """ Checks job status """
         ssh = SSHSession(ssh_data=self.ssh_data)
         old_status = self.task_data['status']
@@ -185,19 +195,28 @@ class Task():
                 + ' -h --job ' \
                 + self.task_data['remote_job_id']
             )
-            jobid, partition, name, user, st, time, nodes, nodelist = stdout.split()
-            if not st:
+            if not stdout: 
                 self.task_data['status'] = FINISHED
-            elif st == 'R':
-                self.task_data['status'] = RUNNING
-            elif st == 'CG':
-                self.task_data['status'] = CLOSING
-            elif st == 'PD':
-                self.task_data['status'] = SUBMITTED
+            else:
+                jobid, partition, name, user, st, time, nodes, nodelist = stdout.split()
+                if not st:
+                    self.task_data['status'] = FINISHED
+                elif st == 'R':
+                    self.task_data['status'] = RUNNING
+                elif st == 'CG':
+                    self.task_data['status'] = CLOSING
+                elif st == 'PD':
+                    self.task_data['status'] = SUBMITTED
             self.modified = old_status != self.task_data['status']
+        return self.task_data['status']
+    
+    def check_job(self, update=True):
+        if update:
+            self.check_job_status()
+        if self.task_data['status'] is CANCELLED:
+            return ("Job cancelled by user")
         else:
-            print("Job cancelled by user")
-        return "Job {} is {}".format(self.task_data['remote_job_id'], JOB_STATUS[self.task_data['status']])
+            return "Job {} is {}".format(self.task_data['remote_job_id'], JOB_STATUS[self.task_data['status']])
 
     def get_remote_file(self, file):
         """ Get file from remote working dir"""

@@ -75,16 +75,16 @@ class Credentials():
             print("Credentials stored in", self.args.keys_path)
             if self.args.pubkey_path is None:
                 print("Public key, add to authorized_keys on remote host")
-                print(credentials.get_public_str())
+                print(credentials.get_public_key())
         else:
             credentials = SSHCredentials()
             credentials.load_from_file(self.args.keys_path)
 
             if self.args.operation == 'get_pubkey':
-                print(credentials.get_public_str())
+                print(credentials.get_public_key())
 
             elif self.args.operation == 'get_private':
-                print(credentials.get_private())
+                print(credentials.get_private_key())
 
             elif self.args.operation in ('host_install', 'host_remove', 'host_check'):
                 host_str = '{}@{}'.format(credentials.userid, credentials.host)

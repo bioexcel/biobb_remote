@@ -5,7 +5,7 @@ import sys
 from biobb_remote.task import Task
 
 SLURM_COMMANDS = {
-    'submit' : 'sbatch',
+    'submit' : 'sbatch -q debug',
     'queue' : 'squeue',
     'cancel': 'scancel'
 }
@@ -60,11 +60,26 @@ QSETTINGS = {
             'time' : '3-00:00:00'
         },
         'default' : 'openMP_full_node'
+    },
+    'mn1.bsc.es': {
+        'openMP_full_node': {
+            'ntasks': 1,
+            'cpus-per-task' : 48,
+            'ntasks-per-node' : 1,
+            'nodes' : 1,
+            'time' : '01:00:00'
+        },
+        'default' : 'openMP_full_node'
     }
+    
 }
 
 MODULES = {
     'sl1.bsc.es': {
+        'gromacs': ['impi', 'intel', 'fftw/3.3.8', 'gromacs/2018.0']
+    },
+    'mn1.bsc.es': {
+        'biobb' : ['anaconda/2019.10', 'biobb'],
         'gromacs': ['impi', 'intel', 'fftw/3.3.8', 'gromacs/2018.0']
     }
 }
@@ -89,6 +104,11 @@ class Slurm(Task):
             self.task_data['queue_settings'] = QSETTINGS[host][QSETTINGS[host]['default']]
         else:
             self.task_data['queue_settings'] = QSETTINGS[host][setting_id]
+        
+        self.task_data['queue_settings']['job'] = self.id
+        self.task_data['queue_settings']['stdout'] = 'job.out'
+        self.task_data['queue_settings']['stderr'] = 'job.err'
+        self.task_data['queue_settings']['working_dir'] = self._remote_wdir()
 
     def get_queue_settings_string_array(self):
         scr_lines = []
