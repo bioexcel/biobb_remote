@@ -64,11 +64,11 @@ class Task():
             self.ssh_data = credentials
         else:
             self.ssh_data.load_from_file(credentials)
-        
+
     def set_modules(self, module_set):
         """ Developed in inherited classes"""
         pass
-    
+
     def set_queue_settings(self, settings):
         """ Developed in inherited classes"""
         pass
@@ -87,7 +87,7 @@ class Task():
         stdout, stderr = ssh.run_command('mkdir -p ' + self._remote_wdir())
         if stderr:
             sys.exit('Error while creating remote working directory: ' + stderr)
-        
+
         if self.task_data['local_data_bundle']:
             remote_files = ssh.run_sftp('listdir', self._remote_wdir())
             ##TODO overwrite based on file timestamp
@@ -98,22 +98,22 @@ class Task():
                     print("sending_file: {} -> {}".format(file_path, remote_file_path))
         else:
             sys.exit("Error: Create input data bundle first")
-            
+
         self.task_data['input_data_loaded'] = True
         self.modified = True
-    
+
     def get_remote_py_script(self, python_import, files, command, properties=''):
         cmd = python_import + "; " + command + "("
         file_str = []
         for file in files.keys():
-            file_str.append(file + "='" + files[file] + "'") 
+            file_str.append(file + "='" + files[file] + "'")
         cmd += ','.join(file_str)
         if properties:
             cmd += ", properties='" + json.dumps(properties) + "'"
         cmd += ").launch()"
         return '#script\npython -c "' + cmd + '"\n'
 
-      
+
     def prepare_queue_script(self, queue_settings, modules):
         """ Generates remote script including queue settings"""
 
@@ -129,10 +129,10 @@ class Task():
         else:
             script = '\n'.join(scr_lines) + '\n' + self.task_data['local_run_script']
         return script
-    
+
     def get_queue_settings_string_array(self):
         """ Generates queue settings to include in script
-            Developed in inherited queue classes 
+            Developed in inherited queue classes
         """
         return []
 
@@ -145,7 +145,7 @@ class Task():
         self.task_data['local_run_script'] = local_run_script
         self.task_data['remote_run_script'] = self._remote_wdir() + '/run_script.sh'
         ssh.run_sftp(
-            'create', 
+            'create',
             self.prepare_queue_script(queue_settings, modules),
             self.task_data['remote_run_script']
         )
@@ -159,7 +159,7 @@ class Task():
         if poll_time:
             self.check_job(poll_time=poll_time)
 
-        
+
     def get_submitted_job_id(self):
         """ Reports job id after submission, developed in inherited classes """
         return ''
@@ -199,7 +199,7 @@ class Task():
                 + ' -h --job ' \
                 + self.task_data['remote_job_id']
             )
-            if not stdout: 
+            if not stdout:
                 self.task_data['status'] = FINISHED
             else:
                 jobid, partition, name, user, st, time, nodes, nodelist = stdout.split()
@@ -213,7 +213,7 @@ class Task():
                     self.task_data['status'] = SUBMITTED
             self.modified = old_status != self.task_data['status']
         return self.task_data['status']
-    
+
     def check_job(self, update=True, poll_time=0):
         self.check_job_status()
         if self.task_data['status'] is CANCELLED:
@@ -233,15 +233,15 @@ class Task():
         ssh = SSHSession(ssh_data=self.ssh_data)
         #TODO check remote file exists
         return ssh.run_sftp('file', self._remote_wdir() + "/" + file)
-        
+
     def get_logs(self):
         """ Get specific queue logs"""
         self.check_job()
         stdout = self.get_remote_file(self.task_data['queue_settings']['stdout'])
         stderr = self.get_remote_file(self.task_data['queue_settings']['stderr'])
-        
+
         return stdout, stderr
- 
+
 
     def get_output_data(self, local_data_path='', overwrite=False):
         """ Downloads remote working dir contents to local """
@@ -304,7 +304,7 @@ class Task():
         else:
             sys.exit("ERROR: Mode ({}) not supported")
         self.modified = False
-        
+
     def clean_remote(self):
         session = SSHSession(ssh_data=self.ssh_data)
         session.run_sftp('rmdir', self._remote_wdir())

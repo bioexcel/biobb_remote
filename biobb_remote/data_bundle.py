@@ -18,9 +18,9 @@ class DataBundle():
             self.files = list(map(lambda x: dir_path+'/'+x, os.listdir(dir_path)))
         except IOError as err:
             sys.exit(err)
-    
+
     def get_file_names(self):
         return [os.path.basename(x) for x in self.files]
-    
+
     def to_json(self):
         return json.dumps(self)

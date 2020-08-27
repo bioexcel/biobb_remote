@@ -71,7 +71,7 @@ QSETTINGS = {
         },
         'default' : 'openMP_full_node'
     }
-    
+
 }
 
 MODULES = {
@@ -104,7 +104,7 @@ class Slurm(Task):
             self.task_data['queue_settings'] = QSETTINGS[host][QSETTINGS[host]['default']]
         else:
             self.task_data['queue_settings'] = QSETTINGS[host][setting_id]
-        
+
         self.task_data['queue_settings']['job'] = self.id
         self.task_data['queue_settings']['stdout'] = 'job.out'
         self.task_data['queue_settings']['stderr'] = 'job.err'

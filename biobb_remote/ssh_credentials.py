@@ -72,7 +72,7 @@ class SSHCredentials():
         if not self.remote_auth_keys:
             self._get_remote_auth_keys()
         return self.get_public_key() in self.remote_auth_keys
-    
+
     def install_host_auth(self, file_bck='bck'):
         if not self.check_host_auth():
             if file_bck:
@@ -83,8 +83,8 @@ class SSHCredentials():
             print('Biobb Public key installed on host')
         else:
             print('Biobb Public key already authorized')
-                
-    
+
+
     def remove_host_auth(self, file_bck='biobb'):
         if self.check_host_auth():
             if file_bck:
@@ -95,7 +95,7 @@ class SSHCredentials():
             print("Biobb Public key removed from host")
         else:
             print("Biobb Public key not found")
-    
+
     def _set_user_ssh_session(self, sftp=True):
         self.user_ssh = SSHClient()
         self.user_ssh.set_missing_host_key_policy(AutoAddPolicy())
@@ -114,24 +114,24 @@ class SSHCredentials():
     def _get_remote_auth_keys(self):
         if not self.user_ssh:
             self._set_user_ssh_session(sftp=True)
-        
+
         with self.sftp.file('.ssh/authorized_keys', mode='r') as ak_file:
             self.remote_auth_keys = ak_file.readlines()
 
     def _put_remote_auth_keys(self, file_ext=''):
         if not self.remote_auth_keys:
             return True
-    
+
         if not self.user_ssh:
             self._set_user_ssh_session(sftp=True)
-        
+
         auth_file = '.ssh/authorized_keys'
         if file_ext:
             auth_file += '.' + file_ext
-        
+
         with self.sftp.file(auth_file, 'w') as bck_file:
             bck_file.writelines(self.remote_auth_keys)
-        
+
         return False
-        
+
 

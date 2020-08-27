@@ -92,14 +92,14 @@ class Slurm_test():
                 print("Task data loaded from", self.args.task_file_path)
             except IOError:
                 print("Task data not loaded")
-        
+
         if self.args.command == 'submit':
             slurm_task.set_local_data_bundle(self.args.local_data_path)
             if 'input_data_loaded' not in slurm_task.task_data:
                 slurm_task.send_input_data(self.args.remote_path)
             slurm_task.submit(self.args.queue_settings, self.args.modules, self.args.local_run_script)
             print("job id", slurm_task.task_data['remote_job_id'])
-            
+
         elif self.args.command == 'cancel':
             slurm_task.cancel(remove_data=True)
             print('job ' + slurm_task.task_data['remote_job_id'] + '  cancelled')
@@ -114,18 +114,18 @@ class Slurm_test():
 
         elif self.args.command == 'get_data':
             slurm_task.get_output_data(self.args.local_data_path, False)
-        
+
         elif self.args.command == 'put_data':
             slurm_task.set_local_data_bundle(self.args.local_data_path)
             slurm_task.send_input_data(self.args.remote_path)
-            
+
         elif self.args.command == 'logs':
             stdout, stderr = slurm_task.get_logs()
             print("Job Output log")
             print(stdout)
             print("Jog Error log")
             print(stderr)
-            
+
         elif self.args.command == 'get_file':
             print(slurm_task.get_remote_file(self.args.remote_file))
 
