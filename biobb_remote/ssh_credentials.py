@@ -22,6 +22,10 @@ class SSHCredentials():
         if generate_key:
             self.generate_key()
 
+    def add_external_keys(self):
+        #TODO
+        pass
+    
     def load_from_file(self, credentials_path):
         """ Obtain credentials from file """
         try:
@@ -115,8 +119,11 @@ class SSHCredentials():
         if not self.user_ssh:
             self._set_user_ssh_session(sftp=True)
 
-        with self.sftp.file('.ssh/authorized_keys', mode='r') as ak_file:
-            self.remote_auth_keys = ak_file.readlines()
+        try:
+            with self.sftp.file('.ssh/authorized_keys', mode='r') as ak_file:
+                self.remote_auth_keys = ak_file.readlines()
+        except IOError:
+            self.remote_auth_keys = []
 
     def _put_remote_auth_keys(self, file_ext=''):
         if not self.remote_auth_keys:
