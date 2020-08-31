@@ -12,7 +12,12 @@ from paramiko import SSHClient, AutoAddPolicy, AuthenticationException, RSAKey
 
 
 class SSHCredentials():
-    """ Generation of ssl credentials for remote execution """
+    """ Generation of ssl credentials for remote execution
+            * host: Target host name
+            * userid: Target user id
+            * generate_key: Generate a pub/private key pair
+            * look_for_keys: Look for keys in user's .ssh directory if no key provided
+    """
     def __init__(self, host='', userid='', generate_key=False, look_for_keys=True):
         self.host = host
         self.userid = userid
@@ -23,12 +28,10 @@ class SSHCredentials():
         if generate_key:
             self.generate_key()
 
-    def add_external_keys(self):
-        #TODO
-        pass
-
     def load_from_file(self, credentials_path):
-        """ Obtain credentials from file """
+        """ Obtain credentials from file 
+                * credentials_path: Path to packed credentials file
+        """
         try:
             file = open(credentials_path, 'rb')
             data = pickle.load(file)
@@ -40,11 +43,13 @@ class SSHCredentials():
         self.key = RSAKey.from_private_key(StringIO(data['data'].getvalue()))
 
     def generate_key(self, nbits=2048):
-        """ Generates new Private Key """
+        """ Generates new nbits Private Key """
         self.key = RSAKey.generate(nbits)
 
     def get_public_key(self, suffix='@biobb'):
-        """ Returns a readable public key suitable to add to authorized_keys """
+        """ Returns a readable public key suitable to add to authorized_keys
+                *suffix: added to the end of public key for readibility
+        """
         return '{} {} {}{}\n'.format(
             self.key.get_name(), self.key.get_base64(), self.userid, suffix
         )
@@ -54,33 +59,42 @@ class SSHCredentials():
         self.key.write_private_key(private)
         return private.getvalue()
 
-    def save(self, output_path='', public_key_path=None, private_key_path=None):
-        """ Save packed credentials on external file"""
-        if output_path != '':
-            with open(output_path, 'wb') as keys_file:
-                private = StringIO()
-                self.key.write_private_key(private)
-                pickle.dump(
-                    {
-                        'userid': self.userid,
-                        'host': self.host,
-                        'data': private,
-                        'look_for_keys': self.look_for_keys
-                    }, keys_file)
-            if public_key_path:
-                with open(public_key_path, 'w') as pubkey_file:
-                    pubkey_file.write(self.get_public_key())
-            if private_key_path:
-                with open(private_key_path, 'w') as privkey_file:
-                    privkey_file.write(self.get_private_key())
-                os.chmod(private_key_path, stat.S_IREAD + stat.S_IWRITE)
+    def save(self, output_path, public_key_path=None, private_key_path=None):
+        """ Save packed credentials on external file for re-usage
+                * output_path: Path to the packed credentials file
+                * public_key_path: Path to a standard public key file
+                * private_key_path: Path to a standard private key file
+        """
+        with open(output_path, 'wb') as keys_file:
+            private = StringIO()
+            self.key.write_private_key(private)
+            pickle.dump(
+                {
+                    'userid': self.userid,
+                    'host': self.host,
+                    'data': private,
+                    'look_for_keys': self.look_for_keys
+                }, keys_file)
+        if public_key_path:
+            with open(public_key_path, 'w') as pubkey_file:
+                pubkey_file.write(self.get_public_key())
+        if private_key_path:
+            with open(private_key_path, 'w') as privkey_file:
+                privkey_file.write(self.get_private_key())
+            os.chmod(private_key_path, stat.S_IREAD + stat.S_IWRITE)
 
     def check_host_auth(self):
+        """ Check for public_key in remote .ssh/authorized_keys file
+                Requires users' SSH access to host
+        """
         if not self.remote_auth_keys:
             self._get_remote_auth_keys()
         return self.get_public_key() in self.remote_auth_keys
 
     def install_host_auth(self, file_bck='bck'):
+        """ Installs public_key on remote .ssh/authorized_keys file
+                Requires users' SSH access to host
+        """
         if not self.check_host_auth():
             if file_bck:
                 self._put_remote_auth_keys(file_bck)
@@ -92,6 +106,9 @@ class SSHCredentials():
             print('Biobb Public key already authorized')
 
     def remove_host_auth(self, file_bck='biobb'):
+        """ Removes public_key from remote .ssh/authorized_keys file
+               Requires users' SSH access to host
+        """
         if self.check_host_auth():
             if file_bck:
                 self._put_remote_auth_keys(file_bck)
@@ -103,6 +120,7 @@ class SSHCredentials():
             print("Biobb Public key not found")
 
     def _set_user_ssh_session(self, sftp=True):
+        """ Internal. Opens a ssh session using user's keys """
         self.user_ssh = SSHClient()
         self.user_ssh.set_missing_host_key_policy(AutoAddPolicy())
         #paramiko.common.logging.basicConfig(level=paramiko.common.DEBUG)
@@ -111,13 +129,14 @@ class SSHCredentials():
                 self.host,
                 username=self.userid,
             )
-        except AuthenticationException:
-            sys.exit("Authentication Error using user's credentials")
+        except AuthenticationException as err:
+            sys.exit(err)
 
         if sftp:
             self.sftp = self.user_ssh.open_sftp()
 
     def _get_remote_auth_keys(self):
+        """ Internal. Obtains authorized keys on remote """
         if not self.user_ssh:
             self._set_user_ssh_session(sftp=True)
 
@@ -128,6 +147,9 @@ class SSHCredentials():
             self.remote_auth_keys = []
 
     def _put_remote_auth_keys(self, file_ext=''):
+        """ Internal: Adds public_key to remote authorized_keys
+                * file_ext: optional file extension for backup of the original file
+        """
         if not self.remote_auth_keys:
             return True
 

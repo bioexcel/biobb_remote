@@ -27,7 +27,11 @@ JOB_STATUS = {
 }
 
 class Task():
-    """ Classe to handle task execution """
+    """ Classe to handle task execution 
+            * host: Remote host
+            * userid: remote user id
+            * look_for_keys: Look for keys in user's .ssh directory
+    """
     def __init__(self, host=None, userid=None, look_for_keys=True):
         self.id = str(uuid.uuid4())
         #self.description = description
@@ -58,7 +62,7 @@ class Task():
         self.id = self.task_data['id']
 
     def set_credentials(self, credentials):
-        """ Loads ssh credentials from external file"""
+        """ Loads ssh credentials from SSHCredentials object or from a external file"""
         if isinstance(credentials, SSHCredentials):
             self.ssh_data = credentials
         else:
@@ -74,7 +78,7 @@ class Task():
         pass
 
     def set_local_data_bundle(self, local_data_path):
-        """ Builds local data bundle from local directory"""
+        """ Builds local data bundle from a local directory"""
         self.task_data['local_data_bundle'] = DataBundle(self.id)
         self.task_data['local_data_bundle'].add_dir(local_data_path)
         self.task_data['local_data_path'] = local_data_path
@@ -88,21 +92,21 @@ class Task():
         if stderr:
             sys.exit('Error while creating remote working directory: ' + stderr)
 
-        if self.task_data['local_data_bundle']:
-            remote_files = ssh.run_sftp('listdir', self._remote_wdir())
-            ##TODO overwrite based on file timestamp
-            for file_path in self.task_data['local_data_bundle'].files:
-                remote_file_path = self._remote_wdir() + '/' + os.path.basename(file_path)
-                if overwrite or os.path.basename(file_path) not in remote_files:
-                    ssh.run_sftp('put', file_path, remote_file_path)
-                    print("sending_file: {} -> {}".format(file_path, remote_file_path))
-        else:
+        if not self.task_data['local_data_bundle']:
             sys.exit("Error: Create input data bundle first")
-
+           
+        remote_files = ssh.run_sftp('listdir', self._remote_wdir())
+        ##TODO overwrite based on file timestamp
+        for file_path in self.task_data['local_data_bundle'].files:
+            remote_file_path = self._remote_wdir() + '/' + os.path.basename(file_path)
+            if overwrite or os.path.basename(file_path) not in remote_files:
+                ssh.run_sftp('put', file_path, remote_file_path)
+                print("sending_file: {} -> {}".format(file_path, remote_file_path))
         self.task_data['input_data_loaded'] = True
         self.modified = True
 
     def get_remote_py_script(self, python_import, files, command, properties=''):
+        """ Generates 1 line python command for queue script """
         cmd = python_import + "; " + command + "("
         file_str = []
         for file in files.keys():
@@ -113,16 +117,17 @@ class Task():
         cmd += ").launch()"
         return '#script\npython -c "' + cmd + '"\n'
 
-
     def prepare_queue_script(self, queue_settings, modules):
         """ Generates remote script including queue settings"""
-
         self.set_queue_settings(queue_settings)
         self.set_modules(modules)
+        
         scr_lines = ["#!/bin/sh"]
         scr_lines += self.get_queue_settings_string_array()
+        
         for mod in self.task_data['modules']:
             scr_lines.append('module load ' + mod)
+        
         if self.task_data['local_run_script'].find('#') == -1:
             with open(self.task_data['local_run_script'], 'r') as scr_file:
                 script = '\n'.join(scr_lines) + '\n' + scr_file.read()
@@ -137,10 +142,12 @@ class Task():
         return []
 
     def submit(self, queue_settings, modules, local_run_script, poll_time=0):
-        """ Submits task """
+        """ Submits task 
+                * poll_time (seconds): if set polls periodically for job completion
+        """
         if not self.ssh_data:
-            print("ERROR: No credentials")
-            return
+            sys.exit("ERROR: No credentials")
+        
         ssh = SSHSession(ssh_data=self.ssh_data)
         self.task_data['local_run_script'] = local_run_script
         self.task_data['remote_run_script'] = self._remote_wdir() + '/run_script.sh'
@@ -164,11 +171,11 @@ class Task():
         """ Reports job id after submission, developed in inherited classes """
         return ''
 
-    def cancel(self, remove_data=True):
+    def cancel(self, remove_data=False):
         """ Cancels running task """
         if not self.ssh_data:
-            print("No credentials available")
-            return
+            sys.exit("No credentials available")
+
         if self.task_data['status'] in [SUBMITTED, RUNNING]:
             ssh = SSHSession(ssh_data=self.ssh_data)
             stdout, stderr = ssh.run_command(
@@ -176,8 +183,7 @@ class Task():
             )
             print("Job {} cancelled".format(self.task_data['remote_job_id']))
             if remove_data:
-                print("Removing remote data for job {}".format(self.task_data['remote_job_id']))
-                ssh.run_command('rm -rf ' + self._remote_wdir())
+                self.clean_remote()
             self.task_data['status'] = CANCELLED
             self.modified = True
         else:
@@ -215,6 +221,10 @@ class Task():
         return self.task_data['status']
 
     def check_job(self, update=True, poll_time=0):
+        """ Prints job status 
+                * update: update status before printing it
+                * poll_time (Seconds): poll until job finished
+        """
         self.check_job_status()
         if self.task_data['status'] is CANCELLED:
             print ("Job cancelled by user")
@@ -226,7 +236,8 @@ class Task():
             self._print_job_status()
 
     def _print_job_status(self):
-            print("Job {} is {}".format(self.task_data['remote_job_id'], JOB_STATUS[self.task_data['status']]))
+        """ Prints readable job status """
+        print("Job {} is {}".format(self.task_data['remote_job_id'], JOB_STATUS[self.task_data['status']]))
 
     def get_remote_file(self, file):
         """ Get file from remote working dir"""
@@ -267,7 +278,8 @@ class Task():
         output_data_bundle = DataBundle(self.task_data['id'] + '_output')
 
         local_file_names = os.listdir(local_data_path)
-
+        
+        # TODO check for file time stamps
         for file in remote_file_list:
             if overwrite or (file not in local_file_names):
                 output_data_bundle.add_file(file)
@@ -306,8 +318,10 @@ class Task():
         self.modified = False
 
     def clean_remote(self):
-        session = SSHSession(ssh_data=self.ssh_data)
-        session.run_sftp('rmdir', self._remote_wdir())
+        """ Remove data from remote host """
+        ssh = SSHSession(ssh_data=self.ssh_data)
+        print("Removing remote data for job {}".format(self.task_data['remote_job_id']))
+        ssh.run_command('rm -rf ' + self._remote_wdir())
         del self.task_data['output_data_path']
         del self.task_data['output_data_bundle']
 

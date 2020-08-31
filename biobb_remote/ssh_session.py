@@ -11,7 +11,10 @@ from io import StringIO
 from paramiko import SSHClient, AutoAddPolicy, AuthenticationException, SSHException, RSAKey
 
 class SSHSession():
-    """ Class wrapping ssh operations """
+    """ Class wrapping ssh operations 
+            * ssh_data: SSHCredentials object
+            * credentials_path: Path to packed credentials file to use
+    """
     def __init__(self, ssh_data=None, credentials_path=None):
         if ssh_data is None:
             self.ssh_data = SSHCredentials(credentials_path is None)
@@ -35,7 +38,7 @@ class SSHSession():
             sys.exit(err)
 
     def run_command(self, command):
-        """ Runs SSH command on remote"""
+        """ Runs command on remote"""
         if self.ssh:
             stdin, stdout, stderr = self.ssh.exec_command(command)
         return ''.join(stdout), ''.join(stderr)
@@ -59,8 +62,8 @@ class SSHSession():
                     return remote_file.read().decode()
             elif oper == "listdir":
                 return sftp.listdir(input_file_path)
-            elif oper == 'rmdir':
-                return sftp.rmdir(input_file_path)
+#            elif oper == 'rmdir':
+#                return sftp.rmdir(input_file_path)
             else:
                 print('Unknown sftp command', oper)
                 return True

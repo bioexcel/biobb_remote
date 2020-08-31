@@ -74,6 +74,7 @@ QSETTINGS = {
 
 }
 
+# Bundled modules 
 MODULES = {
     'sl1.bsc.es': {
         'gromacs': ['impi', 'intel', 'fftw/3.3.8', 'gromacs/2018.0']
