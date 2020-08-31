@@ -77,11 +77,12 @@ class Task():
         """ Developed in inherited classes"""
         pass
 
-    def set_local_data_bundle(self, local_data_path):
+    def set_local_data_bundle(self, local_data_path, add_files=True):
         """ Builds local data bundle from a local directory"""
         self.task_data['local_data_bundle'] = DataBundle(self.id)
-        self.task_data['local_data_bundle'].add_dir(local_data_path)
         self.task_data['local_data_path'] = local_data_path
+        if add_files:
+            self.task_data['local_data_bundle'].add_dir(local_data_path)
         self.modified = True
 
     def send_input_data(self, remote_base_path, overwrite=True):
