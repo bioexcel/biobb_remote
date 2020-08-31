@@ -8,7 +8,7 @@ import stat
 import pickle
 import paramiko
 from io import StringIO
-from paramiko import SSHClient, AutoAddPolicy, AuthenticationException, RSAKey
+from paramiko import SSHClient, AutoAddPolicy, AuthenticationException, SSHException, RSAKey
 
 class SSHSession():
     """ Class wrapping ssh operations """
@@ -21,16 +21,18 @@ class SSHSession():
             self.ssh_data = ssh_data
         self.ssh = SSHClient()
         self.ssh.set_missing_host_key_policy(AutoAddPolicy())
-        paramiko.common.logging.basicConfig(level=paramiko.common.DEBUG)
+        #paramiko.common.logging.basicConfig(level=paramiko.common.DEBUG)
         try:
             self.ssh.connect(
                 self.ssh_data.host,
                 username=self.ssh_data.userid,
                 pkey=self.ssh_data.key,
-                look_for_keys=True
+                look_for_keys=self.ssh_data.look_for_keys
             )
-        except AuthenticationException:
-            sys.exit("Authentication Error")
+        except AuthenticationException as err:
+            sys.exit(err)
+        except SSHException as err:
+            sys.exit(err)
 
     def run_command(self, command):
         """ Runs SSH command on remote"""

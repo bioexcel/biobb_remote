@@ -13,11 +13,12 @@ from paramiko import SSHClient, AutoAddPolicy, AuthenticationException, RSAKey
 
 class SSHCredentials():
     """ Generation of ssl credentials for remote execution """
-    def __init__(self, host='', userid='', generate_key=False):
+    def __init__(self, host='', userid='', generate_key=False, look_for_keys=True):
         self.host = host
         self.userid = userid
         self.key = None
         self.user_ssh = None
+        self.look_for_keys = look_for_keys
         self.remote_auth_keys = []
         if generate_key:
             self.generate_key()
@@ -25,7 +26,7 @@ class SSHCredentials():
     def add_external_keys(self):
         #TODO
         pass
-    
+
     def load_from_file(self, credentials_path):
         """ Obtain credentials from file """
         try:
@@ -35,6 +36,7 @@ class SSHCredentials():
             sys.exit(err)
         self.host = data['host']
         self.userid = data['userid']
+        self.look_for_keys = data['look_for_keys']
         self.key = RSAKey.from_private_key(StringIO(data['data'].getvalue()))
 
     def generate_key(self, nbits=2048):
@@ -62,7 +64,8 @@ class SSHCredentials():
                     {
                         'userid': self.userid,
                         'host': self.host,
-                        'data': private
+                        'data': private,
+                        'look_for_keys': self.look_for_keys
                     }, keys_file)
             if public_key_path:
                 with open(public_key_path, 'w') as pubkey_file:
@@ -87,7 +90,6 @@ class SSHCredentials():
             print('Biobb Public key installed on host')
         else:
             print('Biobb Public key already authorized')
-
 
     def remove_host_auth(self, file_bck='biobb'):
         if self.check_host_auth():
@@ -140,5 +142,3 @@ class SSHCredentials():
             bck_file.writelines(self.remote_auth_keys)
 
         return False
-
-

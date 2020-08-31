@@ -28,10 +28,10 @@ JOB_STATUS = {
 
 class Task():
     """ Classe to handle task execution """
-    def __init__(self, host=None, userid=None):
+    def __init__(self, host=None, userid=None, look_for_keys=True):
         self.id = str(uuid.uuid4())
         #self.description = description
-        self.ssh_data = SSHCredentials(host=host, userid=userid)
+        self.ssh_data = SSHCredentials(host=host, userid=userid, look_for_keys=look_for_keys)
         self.task_data = {'id':self.id}
         self.commands = {}
         self.modified = False

@@ -85,8 +85,8 @@ MODULES = {
 }
 
 class Slurm(Task):
-    def __init__(self, host=None, userid=None):
-        Task.__init__(self, host, userid)
+    def __init__(self, host=None, userid=None, look_for_keys=True):
+        Task.__init__(self, host, userid, look_for_keys)
         self.commands = SLURM_COMMANDS
 
     def set_modules(self, module_set):
