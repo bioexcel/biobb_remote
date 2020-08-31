@@ -110,12 +110,23 @@ class Task():
         cmd = python_import + "; " + command + "("
         file_str = []
         for file in files.keys():
-            file_str.append(file + "='" + files[file] + "'")
+            if files[file]:
+                file_str.append(file + "='" + files[file] + "'")
         cmd += ','.join(file_str)
         if properties:
             cmd += ", properties='" + json.dumps(properties) + "'"
         cmd += ").launch()"
         return '#script\npython -c "' + cmd + '"\n'
+
+    def get_remote_comm_line(self, command, files, properties=''):
+        """ Generates a command line for queue script """
+        cmd = ["/apps/BIOBB/3.0/conda/lib/python3.7/site-packages/"+command]
+        for file in files.keys():
+            if files[file]:
+                cmd.append('--' + file + " " + files[file] )
+        if properties:
+            cmd.append("-c '" + json.dumps(properties) + "'")
+        return '#script\n' + ' '.join(cmd) + '\n'
 
     def prepare_queue_script(self, queue_settings, modules):
         """ Generates remote script including queue settings"""
@@ -226,18 +237,20 @@ class Task():
                 * poll_time (Seconds): poll until job finished
         """
         self.check_job_status()
+        current_time = 0
         if self.task_data['status'] is CANCELLED:
             print ("Job cancelled by user")
         else:
             if poll_time:
                 while self.check_job_status() != FINISHED:
-                    self._print_job_status()
+                    self._print_job_status(prefix=current_time)
                     time.sleep(poll_time)
+                    current_time += poll_time
             self._print_job_status()
 
-    def _print_job_status(self):
+    def _print_job_status(self, prefix=''):
         """ Prints readable job status """
-        print("Job {} is {}".format(self.task_data['remote_job_id'], JOB_STATUS[self.task_data['status']]))
+        print("{} Job {} is {}".format(prefix, self.task_data['remote_job_id'], JOB_STATUS[self.task_data['status']]))
 
     def get_remote_file(self, file):
         """ Get file from remote working dir"""
