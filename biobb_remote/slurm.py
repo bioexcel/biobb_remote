@@ -5,7 +5,7 @@ import sys
 from biobb_remote.task import Task
 
 SLURM_COMMANDS = {
-    'submit' : 'sbatch -q debug',
+    'submit' : 'sbatch',
     'queue' : 'squeue',
     'cancel': 'scancel'
 }
@@ -47,7 +47,7 @@ QSETTINGS = {
             },
         'mpi_only_node': {
             'ntasks': 40,
-            'cpus-per-task':1,
+            'cpus-per-task':1, 
             'ntasks-per-node': 40,
             'nodes': 1,
             'time' : '3-00:00:00'
@@ -62,11 +62,22 @@ QSETTINGS = {
         'default' : 'openMP_full_node'
     },
     'mn1.bsc.es': {
-        'openMP_full_node': {
+        'serial': {
+            'ntasks': 1,
+            'cpus-per-task' : 1,
+            'time' : '1-00:00:00'
+        },'openMP_full_node': {
             'ntasks': 1,
             'cpus-per-task' : 48,
             'ntasks-per-node' : 1,
             'nodes' : 1,
+            'time' : '01:00:00'
+        },
+        'mpi_4_nodes': {
+            'ntasks': 192,
+            'cpus-per-task':1,
+            'ntasks-per-node': 48,
+            'nodes': 4,
             'time' : '01:00:00'
         },
         'default' : 'openMP_full_node'
@@ -97,11 +108,13 @@ class Slurm(Task):
         else:
             sys.exit('slurm: error: module set unknown')
 
-    def set_queue_settings(self, setting_id='default'):
+    def set_queue_settings(self, setting_id='default', settings=None):
         host = self.ssh_data.host
         if setting_id is None:
             setting_id = 'serial'
-        if setting_id == 'default':
+        if setting_id == 'custom':
+            self.task_data['queue_settings'] = settings
+        elif setting_id == 'default':
             self.task_data['queue_settings'] = QSETTINGS[host][QSETTINGS[host]['default']]
         else:
             self.task_data['queue_settings'] = QSETTINGS[host][setting_id]
