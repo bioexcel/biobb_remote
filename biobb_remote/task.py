@@ -137,14 +137,17 @@ class Task():
 
     def get_remote_py_script(self, python_import, files, command, properties=''):
         """ Generates 1 line python command for queue script """
-        cmd = python_import + "; " + command + "("
+        cmd = python_import
+        if properties:
+            cmd += ";from biobb_common.configuration import settings;"
+        cmd += command + "("
         file_str = []
         for file in files.keys():
             if files[file]:
                 file_str.append(file + "='" + files[file] + "'")
         cmd += ','.join(file_str)
         if properties:
-            cmd += ", properties='" + json.dumps(properties) + "'"
+            cmd += ", properties=settings.ConfReader(config='" + properties.replace('"', '\\"') + "').get_prop_dic()"
         cmd += ").launch()"
         return '#script\npython -c "' + cmd + '"\n'
 
@@ -183,7 +186,8 @@ class Task():
         """
         return []
 
-    def submit(self, queue_settings, modules, local_run_script, poll_time=0):
+    def submit(self, queue_settings, modules, local_run_script, 
+        poll_time=0):
         """ Submits task 
                 * poll_time (seconds): if set polls periodically for job completion
         """

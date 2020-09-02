@@ -5,7 +5,7 @@ import sys
 from biobb_remote.task import Task
 
 SLURM_COMMANDS = {
-    'submit' : 'sbatch -q debug',
+    'submit' : 'sbatch',
     'queue' : 'squeue',
     'cancel': 'scancel'
 }
