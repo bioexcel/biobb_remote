@@ -1,0 +1,30 @@
+{
+    "qsettings" :{
+        "serial": {
+            "ntasks": 1,
+            "cpus-per-task" : 1,
+            "time" : "1-00:00:00"
+        },
+        "openMP_full_node": {
+            "ntasks": 1,
+            "cpus-per-task" : 48,
+            "ntasks-per-node" : 1,
+            "nodes" : 1,
+            "time" : "01:00:00"
+        },
+        "mpi_4_nodes": {
+            "ntasks": 192,
+            "cpus-per-task":1,
+            "ntasks-per-node": 48,
+            "nodes": 4,
+            "time" : "01:00:00"
+        },
+        "default" : "openMP_full_node"
+    },
+    "modules" :{
+        "biobb" : ["anaconda/2019.10", "biobb"],
+        "gromacs": ["impi", "intel", "fftw/3.3.8", "gromacs/2018.0"]
+    },
+    "biobb_apps_path" : "/apps/BIOBB/3.0/conda/lib/python3.7/site-packages/",
+    "login_hosts" : ["mn1.bsc.es", "mn2.bsc.es"]            
+}

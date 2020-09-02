@@ -69,14 +69,40 @@ class Task():
         else:
             self.ssh_data.load_from_file(credentials)
             
+    def load_host_config(self, host_config_path):
+        try:
+            with open(host_config_path, 'r') as host_config_file:
+                self.host_config = json.load(host_config_file)
+        except IOError as err:
+            sys.exit(err)
 
     def set_modules(self, module_set):
-        """ Developed in inherited classes"""
-        pass
+        if module_set in self.host_config['modules']:
+            self.task_data['modules'] = self.host_config['modules'][module_set]
+        else:
+            sys.exit('slurm: error: unknown module set')
 
-    def set_queue_settings(self, settings):
-        """ Developed in inherited classes"""
-        pass
+    def set_queue_settings(self, setting_id='default', settings=None):
+
+        host = self.ssh_data.host
+        if host not in self.host_config['login_hosts']:
+            sys.exit("Error. No configuration available for", host)
+        
+        if setting_id is None:
+            setting_id = 'serial'
+        
+        if settings:
+            self.task_data['queue_settings'] = settings
+        elif setting_id == 'default':
+            self.task_data['queue_settings'] = self.host_config['qsettings'][self.host_config['qsettings']['default']]
+        else:
+            self.task_data['queue_settings'] = self.host_config['qsettings'][setting_id]
+
+        self.task_data['queue_settings']['job'] = self.id
+        self.task_data['queue_settings']['stdout'] = 'job.out'
+        self.task_data['queue_settings']['stderr'] = 'job.err'
+        self.task_data['queue_settings']['working_dir'] = self._remote_wdir()
+        self.task_data['remote_apps_path'] = self.host_config['biobb_apps_path']
 
     def set_local_data_bundle(self, local_data_path, add_files=True):
         """ Builds local data bundle from a local directory"""
@@ -124,7 +150,7 @@ class Task():
 
     def get_remote_comm_line(self, command, files, properties=''):
         """ Generates a command line for queue script """
-        cmd = ["/apps/BIOBB/3.0/conda/lib/python3.7/site-packages/"+command]
+        cmd = [self.task_data['remote_apps_path'] + command]
         for file in files.keys():
             if files[file]:
                 cmd.append('--' + file + " " + files[file] )

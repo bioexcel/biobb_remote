@@ -1,0 +1,42 @@
+{
+    "qsettings" :{
+        "serial": {
+            "ntasks": 1,
+            "cpus-per-task" : 1,
+            "time" : "3-00:00:00"
+        },
+        "serial_full_node":{
+            "ntasks": 1,
+            "cpus-per-task" : 1,
+            "ntasks-per-node": 1,
+            "time" : "3-00:00:00"
+        },
+        "openMP_full_node": {
+            "ntasks": 1,
+            "cpus-per-task" : 40,
+            "ntasks-per-node" : 1,
+            "nodes" : 1,
+            "time" : "3-00:00:00"
+            },
+        "mpi_only_node": {
+            "ntasks": 40,
+            "cpus-per-task":1, 
+            "ntasks-per-node": 40,
+            "nodes": 1,
+            "time" : "3-00:00:00"
+        },
+        "mpi_8_nodes": {
+            "ntasks": 320,
+            "cpus-per-task":1,
+            "ntasks-per-node": 40,
+            "nodes": 8,
+            "time" : "3-00:00:00"
+        },
+        "default" : "openMP_full_node"
+    },
+    "modules" :{
+        "gromacs": ["impi", "intel", "fftw/3.3.8", "gromacs/2018.0"]
+    },
+    "biobb_apps_path" : "",
+    "login_hosts" : ["sl1.bsc.es", "sl2.bsc.es"]            
+}
