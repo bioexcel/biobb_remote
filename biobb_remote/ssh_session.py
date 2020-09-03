@@ -55,8 +55,8 @@ class SSHSession():
             elif oper == 'create':
                 with sftp.file(output_file_path, "w") as remote_fileh:
                     remote_fileh.write(input_file_path)
-            elif oper == 'open':
-                return sftp.open(output_file_path)
+#            elif oper == 'open':
+#                return sftp.open(input_file_path)
             elif oper == 'file':
                 with sftp.file(input_file_path, "r") as remote_file:
                     return remote_file.read().decode()
