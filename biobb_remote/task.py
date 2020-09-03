@@ -102,7 +102,7 @@ class Task():
         self.task_data['queue_settings']['stdout'] = 'job.out'
         self.task_data['queue_settings']['stderr'] = 'job.err'
         self.task_data['queue_settings']['working_dir'] = self._remote_wdir()
-        self.task_data['remote_apps_path'] = self.host_config['biobb_apps_path']
+        self.task_data['biobb_apps_path'] = self.host_config['biobb_apps_path']
 
     def set_local_data_bundle(self, local_data_path, add_files=True):
         """ Builds local data bundle from a local directory"""
@@ -153,7 +153,7 @@ class Task():
 
     def get_remote_comm_line(self, command, files, properties=''):
         """ Generates a command line for queue script """
-        cmd = [self.task_data['remote_apps_path'] + command]
+        cmd = [self.task_data['biobb_apps_path'] + command]
         for file in files.keys():
             if files[file]:
                 cmd.append('--' + file + " " + files[file] )
