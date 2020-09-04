@@ -107,6 +107,15 @@ class Task():
         self.task_data['queue_settings']['stderr'] = 'job.err'
         self.task_data['queue_settings']['working_dir'] = self._remote_wdir()
         self.task_data['biobb_apps_path'] = self.host_config['biobb_apps_path']
+    
+    def set_custom_settings(self, ref_setting='default', patch=None):
+        if ref_setting == 'default':
+            ref_setting = self.host_config['qsettings']['default']
+        qset = self.host_config['qsettings'][ref_setting]
+        for k in patch.keys():
+            qset[k] = patch[k]
+        self.host_config['qsettings']['custom'] = qset
+
 
     def set_local_data_bundle(self, local_data_path, add_files=True):
         """ Builds local data bundle from a local directory"""

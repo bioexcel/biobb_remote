@@ -165,19 +165,20 @@ Loads a pre-defined host configuration file
 (void) task.set_modules(module_set)
 ~~~
 Selects a predefined set of HPC modules to use. Module sets are defined in host configuration
-* module_set (**str**): Label of the module set
+* module_set (**str** | **[str]**): Label of the module set, either single value or list
 
-~~~
-(void) task.set_conda_env(conda_env)
-~~~
-Selects a conda environment to activate
-* conda_env (**str**): Environment to activate 
-
-~~~
+ ~~~
 (void) task.set_queue_settings(setting_id='default')
 ~~~
 Selects a set of queueing settings from host configuration.
 * setting_id (**str**): Set to include
+
+~~~
+(void) task.set_custom_settings(self, ref_setting='default', patch=None)
+~~~
+Generates a custom queue setting based on existing one
+* ref_setting (**str**): Base queue settings
+* patch (**dict**): Added or modified settings
 
 ~~~
 (void) task.set_local_data_bundle(local_data_path, add_files=True):
