@@ -147,7 +147,11 @@ class Task():
                 file_str.append(file + "='" + files[file] + "'")
         cmd += ','.join(file_str)
         if properties:
-            cmd += ", properties=settings.ConfReader(config='" + properties.replace('"', '\\"') + "').get_prop_dic()"
+            if isinstance(properties, dict):
+                prop = json.dumps(properties)
+            else:
+                prop = properties
+            cmd += ", properties=settings.ConfReader(config='" + prop.replace('"', '\\"') + "').get_prop_dic()"
         cmd += ").launch()"
         return '#script\npython -c "' + cmd + '"\n'
 
