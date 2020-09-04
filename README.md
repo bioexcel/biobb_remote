@@ -45,6 +45,7 @@ Returns a readable publik key suitable to addto authorized keys
 (str) credentials.get_private_key()
 ~~~
 Returns a readable private key
+
 ~~~
 (bool) credentials.check_host_auth()
 ~~~
@@ -158,7 +159,7 @@ credentials (**SSHCredentials** | **str**): SSHCredentials object or a path to a
 ~~~
 (void) task.load_host_config(host_config_path)
 ~~~
-Loads a pre-defined host configuration file
+Loads a pre-defined host configuration file (devel)
 
 ~~~
 (void) task.set_modules(module_set)
@@ -170,7 +171,7 @@ Selects a predefined set of HPC modules to use. Module sets are defined in host 
 (void) task.set_conda_env(conda_env)
 ~~~
 Selects a conda environment to activate
-* conda_env (**str**): Environment to activate
+* conda_env (**str**): Environment to activate (devel)
 
 ~~~
 (void) task.set_queue_settings(setting_id='default')
@@ -199,7 +200,7 @@ Generates 1 line python code to be executed in the queue script using python -c
 * python_import (**str**): Python import line(s) to include (; separated)
 * files (**dict**): File names to associate to biobb required path parameters
 * command (**str**): biobb class to launch
-* properties (**str**): 1 line Json with the required biobb parameters
+* properties (**str**): 1 line Json with the required biobb parameters (devel)
 
 ~~~
 (str) task.get_remote_comm_line(command, files, properties=''):
@@ -215,7 +216,7 @@ Generates a command line for queue script using command line version of the biob
 Generates remote script including queue settings and necessary modules
 * queue_settings (**str**): Label for set of queue controls (defined in host configuration)
 * modules (**str**): modules to activate (defined in host configuration)
-* conda_env (**str**): Conda environment to activate
+* conda_env (**str**): Conda environment to activate (devel)
 
 ~~~
 ([str]) task.get_queue_settings_string_array()
@@ -228,7 +229,7 @@ Generates queue settings to include in script. Developed in inherited queue clas
 Submits task 
 * queue_settings (**str**): Label for set of queue controls (defined in host configuration)
 * modules (**str**): modules to activate (defined in host configuration)
-* conda_env (**str**): Conda environment to activate
+* conda_env (**str**): Conda environment to activate (devel)
 * local_run_script (**str**): Path to local script to run or a string with the script itself (identified by leading '#' tag)
 * poll_time (**int**): if set polls periodically for job completion (seconds)
 
@@ -267,7 +268,7 @@ Gets file from remote working dir
 * file (**str**): File name
 
 ~~~
-([stdout, strerr]) task.get_logs()
+([stdout, stderr]) task.get_logs()
 ~~~
 Get queue logs
 
