@@ -36,7 +36,7 @@ class Task():
         self.id = str(uuid.uuid4())
         #self.description = description
         self.ssh_data = SSHCredentials(host=host, userid=userid, look_for_keys=look_for_keys)
-        self.task_data = {'id':self.id}
+        self.task_data = {'id':self.id, 'modules':[]}
         self.ssh_session = None
         self.commands = {}
         self.modified = False
@@ -77,10 +77,14 @@ class Task():
             sys.exit(err)
 
     def set_modules(self, module_set):
-        if module_set in self.host_config['modules']:
-            self.task_data['modules'] = self.host_config['modules'][module_set]
-        else:
-            sys.exit('slurm: error: unknown module set')
+        if not isinstance(module_set, list):
+            module_set = [module_set]
+        self.task_data['modules'] = []
+        for mod in module_set:
+            if mod in self.host_config['modules']:
+                self.task_data['modules'] += self.host_config['modules'][mod]
+            else:
+                sys.exit('slurm: error: unknown module set')
 
     def set_queue_settings(self, setting_id='default', settings=None):
 
@@ -165,17 +169,28 @@ class Task():
             cmd.append("-c '" + json.dumps(properties) + "'")
         return '#script\n' + ' '.join(cmd) + '\n'
 
-    def prepare_queue_script(self, queue_settings, modules):
+    def prepare_queue_script(self, queue_settings, modules, conda_env=''):
         """ Generates remote script including queue settings"""
-        ##TODO add custum queue_settings
-        self.set_queue_settings(queue_settings)
-        self.set_modules(modules)
         
-        scr_lines = ["#!/bin/sh"]
+        # Add to self.task_data
+        if queue_settings:
+            self.set_queue_settings(queue_settings)
+            self.modified = True
+        if modules:
+            self.set_modules(modules)
+            self.modified = True
+        if conda_env:
+            self.task_data['conda_env'] = conda_env
+            self.modified = True
+        
+        scr_lines = ["#!/bin/bash"]
         scr_lines += self.get_queue_settings_string_array()
         
         for mod in self.task_data['modules']:
             scr_lines.append('module load ' + mod)
+        
+        if self.task_data['conda_env']:
+            scr_lines.append('conda activate ' + conda_env)
         
         if self.task_data['local_run_script'].find('#') == -1:
             with open(self.task_data['local_run_script'], 'r') as scr_file:
@@ -190,8 +205,7 @@ class Task():
         """
         return []
 
-    def submit(self, queue_settings, modules, local_run_script, 
-        poll_time=0):
+    def submit(self, queue_settings='', modules=None, local_run_script='', conda_env='', poll_time=0):
         """ Submits task 
                 * poll_time (seconds): if set polls periodically for job completion
         """
@@ -199,9 +213,10 @@ class Task():
         
         self.task_data['local_run_script'] = local_run_script
         self.task_data['remote_run_script'] = self._remote_wdir() + '/run_script.sh'
+        
         self.ssh_session.run_sftp(
             'create',
-            self.prepare_queue_script(queue_settings, modules),
+            self.prepare_queue_script(queue_settings, modules, conda_env=conda_env),
             self.task_data['remote_run_script']
         )
         stdout, stderr = self.ssh_session.run_command(
@@ -211,8 +226,11 @@ class Task():
             sys.exit(stderr)
         self.task_data['remote_job_id'] = self.get_submitted_job_id(stdout)
         self.task_data['status'] = SUBMITTED
+
         self.modified = True
+        
         print('Submitted job {}'.format(self.task_data['remote_job_id']))
+
         if poll_time:
             self.check_job(poll_time=poll_time)
 

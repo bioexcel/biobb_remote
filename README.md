@@ -200,15 +200,15 @@ Generates 1 line python code to be executed in the queue script using python -c
 * python_import (**str**): Python import line(s) to include (; separated)
 * files (**dict**): File names to associate to biobb required path parameters
 * command (**str**): biobb class to launch
-* properties (**str** | **dict**): Either a dict or a 1 line Json with the required biobb parameters 
+* properties (**dict** | **str**): Either a dict, path to a json or yaml config file or a 1-line Json with the required biobb parameters 
 
 ~~~
 (str) task.get_remote_comm_line(command, files, properties=''):
 ~~~
-Generates a command line for queue script using command line version of the biobb module
+Generates a command line for queue script using command line version of the biobb module 
 * files (**dict**): File names to associate to biobb required path parameters
 * command (**str**): biobb command (biobb_XX part of the path, base path provided by host configuration)
-* properties (**str**): 1 line Json with the required biobb parameters
+* properties (**str**): file path (yaml | json) or 1-line Json with the required biobb parameters
 
 ~~~
 (str) task.prepare_queue_script(queue_settings, modules, conda_env):
