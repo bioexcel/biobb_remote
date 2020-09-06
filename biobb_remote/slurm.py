@@ -30,7 +30,7 @@ class Slurm(Task):
         Task.__init__(self, host, userid, look_for_keys)
         self.commands = SLURM_COMMANDS
 
-    def get_queue_settings_string_array(self):
+    def _get_queue_settings_string_array(self):
         scr_lines = []
         for key in self.task_data['queue_settings']:
             scr_lines.append(
@@ -41,6 +41,6 @@ class Slurm(Task):
             )
         return scr_lines
 
-    def get_submitted_job_id(self, submit_output):
+    def _get_submitted_job_id(self, submit_output):
         wds = submit_output.split(' ')
         return wds[3].strip('\n')

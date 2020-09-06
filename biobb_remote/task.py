@@ -9,7 +9,6 @@ import time
 
 from biobb_remote.ssh_session import SSHSession
 from biobb_remote.ssh_credentials import SSHCredentials
-from biobb_remote.data_bundle import DataBundle
 
 UNKNOWN = 0
 SUBMITTED = 1
@@ -26,8 +25,31 @@ JOB_STATUS = {
     CLOSING: 'Closing'
 }
 
+""" Simple class to pack a files manifest"""
+
+class DataBundle():
+    def __init__(self, bundle_id):
+        self.id = bundle_id
+        self.files = []
+
+    def add_file(self, file_path):
+        if file_path not in self.files:
+            self.files.append(file_path)
+
+    def add_dir(self, dir_path):
+        try:
+            self.files = list(map(lambda x: dir_path+'/'+x, os.listdir(dir_path)))
+        except IOError as err:
+            sys.exit(err)
+
+    def get_file_names(self):
+        return [os.path.basename(x) for x in self.files]
+
+    def to_json(self):
+        return json.dumps(self)
+
 class Task():
-    """ Classe to handle task execution 
+    """ Classe to handle task execution
             * host: Remote host
             * userid: remote user id
             * look_for_keys: Look for keys in user's .ssh directory
@@ -38,6 +60,7 @@ class Task():
         self.ssh_data = SSHCredentials(host=host, userid=userid, look_for_keys=look_for_keys)
         self.task_data = {'id':self.id, 'modules':[]}
         self.ssh_session = None
+        self.host_config = None
         self.commands = {}
         self.modified = False
 
@@ -68,7 +91,7 @@ class Task():
             self.ssh_data = credentials
         else:
             self.ssh_data.load_from_file(credentials)
-            
+
     def load_host_config(self, host_config_path):
         try:
             with open(host_config_path, 'r') as host_config_file:
@@ -76,7 +99,7 @@ class Task():
         except IOError as err:
             sys.exit(err)
 
-    def set_modules(self, module_set):
+    def _set_modules(self, module_set):
         if not isinstance(module_set, list):
             module_set = [module_set]
         self.task_data['modules'] = []
@@ -86,15 +109,15 @@ class Task():
             else:
                 sys.exit('slurm: error: unknown module set')
 
-    def set_queue_settings(self, setting_id='default', settings=None):
+    def _set_queue_settings(self, setting_id='default', settings=None):
 
         host = self.ssh_data.host
         if host not in self.host_config['login_hosts']:
             sys.exit("Error. No configuration available for", host)
-        
+
         if setting_id is None:
             setting_id = 'serial'
-        
+
         if settings:
             self.task_data['queue_settings'] = settings
         elif setting_id == 'default':
@@ -107,7 +130,7 @@ class Task():
         self.task_data['queue_settings']['stderr'] = 'job.err'
         self.task_data['queue_settings']['working_dir'] = self._remote_wdir()
         self.task_data['biobb_apps_path'] = self.host_config['biobb_apps_path']
-    
+
     def set_custom_settings(self, ref_setting='default', patch=None):
         if ref_setting == 'default':
             ref_setting = self.host_config['qsettings']['default']
@@ -115,7 +138,6 @@ class Task():
         for k in patch.keys():
             qset[k] = patch[k]
         self.host_config['qsettings']['custom'] = qset
-
 
     def set_local_data_bundle(self, local_data_path, add_files=True):
         """ Builds local data bundle from a local directory"""
@@ -137,7 +159,7 @@ class Task():
 
         if not self.task_data['local_data_bundle']:
             sys.exit("Error: Create input data bundle first")
-           
+
         remote_files = self.ssh_session.run_sftp('listdir', self._remote_wdir())
         ##TODO overwrite based on file timestamp
         for file_path in self.task_data['local_data_bundle'].files:
@@ -173,34 +195,34 @@ class Task():
         cmd = [self.task_data['biobb_apps_path'] + command]
         for file in files.keys():
             if files[file]:
-                cmd.append('--' + file + " " + files[file] )
+                cmd.append('--' + file + " " + files[file])
         if properties:
             cmd.append("-c '" + json.dumps(properties) + "'")
         return '#script\n' + ' '.join(cmd) + '\n'
 
-    def prepare_queue_script(self, queue_settings, modules, conda_env=''):
+    def _prepare_queue_script(self, queue_settings, modules, conda_env=''):
         """ Generates remote script including queue settings"""
-        
+
         # Add to self.task_data
         if queue_settings:
-            self.set_queue_settings(queue_settings)
+            self._set_queue_settings(queue_settings)
             self.modified = True
         if modules:
-            self.set_modules(modules)
+            self._set_modules(modules)
             self.modified = True
         if conda_env:
             self.task_data['conda_env'] = conda_env
             self.modified = True
-        
+
         scr_lines = ["#!/bin/bash"]
-        scr_lines += self.get_queue_settings_string_array()
-        
+        scr_lines += self._get_queue_settings_string_array()
+
         for mod in self.task_data['modules']:
             scr_lines.append('module load ' + mod)
-        
+
         if self.task_data['conda_env']:
             scr_lines.append('conda activate ' + conda_env)
-        
+
         if self.task_data['local_run_script'].find('#') == -1:
             with open(self.task_data['local_run_script'], 'r') as scr_file:
                 script = '\n'.join(scr_lines) + '\n' + scr_file.read()
@@ -208,24 +230,24 @@ class Task():
             script = '\n'.join(scr_lines) + '\n' + self.task_data['local_run_script']
         return script
 
-    def get_queue_settings_string_array(self):
+    def _get_queue_settings_string_array(self):
         """ Generates queue settings to include in script
             Developed in inherited queue classes
         """
         return []
 
     def submit(self, queue_settings='', modules=None, local_run_script='', conda_env='', poll_time=0):
-        """ Submits task 
+        """ Submits task
                 * poll_time (seconds): if set polls periodically for job completion
         """
         self._open_ssh_session()
-        
+
         self.task_data['local_run_script'] = local_run_script
         self.task_data['remote_run_script'] = self._remote_wdir() + '/run_script.sh'
-        
+
         self.ssh_session.run_sftp(
             'create',
-            self.prepare_queue_script(queue_settings, modules, conda_env=conda_env),
+            self._prepare_queue_script(queue_settings, modules, conda_env=conda_env),
             self.task_data['remote_run_script']
         )
         stdout, stderr = self.ssh_session.run_command(
@@ -233,18 +255,18 @@ class Task():
         )
         if stderr:
             sys.exit(stderr)
-        self.task_data['remote_job_id'] = self.get_submitted_job_id(stdout)
+        self.task_data['remote_job_id'] = self._get_submitted_job_id(stdout)
         self.task_data['status'] = SUBMITTED
 
         self.modified = True
-        
+
         print('Submitted job {}'.format(self.task_data['remote_job_id']))
 
         if poll_time:
             self.check_job(poll_time=poll_time)
 
 
-    def get_submitted_job_id(self):
+    def _get_submitted_job_id(self):
         """ Reports job id after submission, developed in inherited classes """
         return ''
 
@@ -267,14 +289,14 @@ class Task():
     def check_queue(self):
         """ Check queue status """
         self._open_ssh_session()
-        
+
         data = self.ssh_session.run_command(self.commands['queue'])
         return data
 
-    def check_job_status(self):
+    def _check_job_status(self):
         """ Checks job status """
         self._open_ssh_session()
-        
+
         old_status = self.task_data['status']
         if self.task_data['status'] is not CANCELLED:
             stdout, stderr = self.ssh_session.run_command(
@@ -285,30 +307,31 @@ class Task():
             if not stdout:
                 self.task_data['status'] = FINISHED
             else:
-                jobid, partition, name, user, st, time, nodes, nodelist = stdout.split()
-                if not st:
+                jobid, partition, name, user, stat, atime, nodes, nodelist = stdout.split()
+                if not stat:
                     self.task_data['status'] = FINISHED
-                elif st == 'R':
+                elif stat == 'R':
                     self.task_data['status'] = RUNNING
-                elif st == 'CG':
+                elif stat == 'CG':
                     self.task_data['status'] = CLOSING
-                elif st == 'PD':
+                elif stat == 'PD':
                     self.task_data['status'] = SUBMITTED
             self.modified = old_status != self.task_data['status']
         return self.task_data['status']
 
     def check_job(self, update=True, poll_time=0):
-        """ Prints job status 
+        """ Prints job status
                 * update: update status before printing it
                 * poll_time (Seconds): poll until job finished
         """
-        self.check_job_status()
+        if update:
+            self._check_job_status()
         current_time = 0
         if self.task_data['status'] is CANCELLED:
-            print ("Job cancelled by user")
+            print("Job cancelled by user")
         else:
             if poll_time:
-                while self.check_job_status() != FINISHED:
+                while self._check_job_status() != FINISHED:
                     self._print_job_status(prefix=current_time)
                     time.sleep(poll_time)
                     current_time += poll_time
@@ -357,7 +380,7 @@ class Task():
         output_data_bundle = DataBundle(self.task_data['id'] + '_output')
 
         local_file_names = os.listdir(local_data_path)
-        
+
         # TODO check for file time stamps
         for file in remote_file_list:
             if overwrite or (file not in local_file_names):
