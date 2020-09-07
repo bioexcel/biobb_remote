@@ -46,7 +46,7 @@ class DataBundle():
         return [os.path.basename(x) for x in self.files]
 
     def to_json(self):
-        return json.dumps(self)
+        return json.dumps(self.__dict__)
 
 class Task():
     """ Classe to handle task execution
@@ -85,6 +85,25 @@ class Task():
             sys.exit("ERROR: file type ({}) not supported".format(mode))
         self.id = self.task_data['id']
 
+    def save(self, save_file_path, mode='json'):
+        """ Saves task data in external file """
+        self.task_data['id'] = self.id
+        if mode == 'json':
+            data = {'id': self.id}
+            if 'local_data_bundle'  in self.task_data:
+                data['local_data_bundle'] = self.task_data['local_data_bundle'].to_json()
+            if 'output_data_bundle'  in self.task_data:
+                data['output_data_bundle'] = self.task_data['output_data_bundle'].to_json()
+            with open(save_file_path, 'w') as task_file:
+                json.dump(data, task_file, indent=3)
+        elif mode == "pickle":
+            with open(save_file_path, 'wb') as task_file:
+                pickle.dump(self.task_data, task_file)
+        else:
+            sys.exit("ERROR: Mode ({}) not supported")
+        self.modified = False
+
+
     def set_credentials(self, credentials):
         """ Loads ssh credentials from SSHCredentials object or from a external file"""
         if isinstance(credentials, SSHCredentials):
@@ -111,12 +130,8 @@ class Task():
 
     def _set_queue_settings(self, setting_id='default', settings=None):
 
-        host = self.ssh_data.host
-        if host not in self.host_config['login_hosts']:
-            sys.exit("Error. No configuration available for", host)
-
-        if setting_id is None:
-            setting_id = 'serial'
+        if self.ssh_data.host not in self.host_config['login_hosts']:
+            sys.exit("Error. No configuration available for", self.ssh_data.host)
 
         if settings:
             self.task_data['queue_settings'] = settings
@@ -172,9 +187,9 @@ class Task():
 
     def get_remote_py_script(self, python_import, files, command, properties=''):
         """ Generates 1 line python command for queue script """
-        cmd = python_import
+        cmd = python_import + ";"
         if properties:
-            cmd += ";from biobb_common.configuration import settings;"
+            cmd += "from biobb_common.configuration import settings;"
         cmd += command + "("
         file_str = []
         for file in files.keys():
@@ -206,21 +221,21 @@ class Task():
         # Add to self.task_data
         if queue_settings:
             self._set_queue_settings(queue_settings)
-            self.modified = True
         if modules:
             self._set_modules(modules)
-            self.modified = True
         if conda_env:
             self.task_data['conda_env'] = conda_env
-            self.modified = True
+        self.modified = True
 
+        #Build bash script
+        
         scr_lines = ["#!/bin/bash"]
         scr_lines += self._get_queue_settings_string_array()
 
         for mod in self.task_data['modules']:
             scr_lines.append('module load ' + mod)
 
-        if self.task_data['conda_env']:
+        if conda_env:
             scr_lines.append('conda activate ' + conda_env)
 
         if self.task_data['local_run_script'].find('#') == -1:
@@ -228,6 +243,7 @@ class Task():
                 script = '\n'.join(scr_lines) + '\n' + scr_file.read()
         else:
             script = '\n'.join(scr_lines) + '\n' + self.task_data['local_run_script']
+        
         return script
 
     def _get_queue_settings_string_array(self):
@@ -250,12 +266,16 @@ class Task():
             self._prepare_queue_script(queue_settings, modules, conda_env=conda_env),
             self.task_data['remote_run_script']
         )
+        
         stdout, stderr = self.ssh_session.run_command(
             self.commands['submit'] + ' ' + self.task_data['remote_run_script']
         )
+        
         if stderr:
             sys.exit(stderr)
+        
         self.task_data['remote_job_id'] = self._get_submitted_job_id(stdout)
+        
         self.task_data['status'] = SUBMITTED
 
         self.modified = True
@@ -396,36 +416,16 @@ class Task():
         self.task_data['output_data_path'] = local_data_path
         self.modified = True
 
-    def save(self, save_file_path, mode='json'):
-        """ Saves task data in external file """
-        self.task_data['id'] = self.id
-        if mode == 'json':
-            if 'local_data_bundle'  in self.task_data:
-                local_data_bundle = self.task_data['local_data_bundle']
-                self.task_data['local_data_bundle'] = json.dumps(local_data_bundle.__dict__)
-            if 'output_data_bundle'  in self.task_data:
-                output_data_bundle = self.task_data['output_data_bundle']
-                self.task_data['output_data_bundle'] = json.dumps(output_data_bundle.__dict__)
-            with open(save_file_path, 'w') as task_file:
-                json.dump(self.task_data, task_file, indent=3)
-            if 'local_data_bundle'  in self.task_data:
-                self.task_data['local_data_bundle'] = local_data_bundle
-            if 'output_data_bundle'  in self.task_data:
-                self.task_data['output_data_bundle'] = output_data_bundle
-        elif mode == "pickle":
-            with open(save_file_path, 'wb') as task_file:
-                pickle.dump(self.task_data, task_file)
-        else:
-            sys.exit("ERROR: Mode ({}) not supported")
-        self.modified = False
 
     def clean_remote(self):
         """ Remove data from remote host """
         self._open_ssh_session()
         print("Removing remote data for job {}".format(self.task_data['remote_job_id']))
         self.ssh_session.run_command('rm -rf ' + self._remote_wdir())
-        del self.task_data['output_data_path']
-        del self.task_data['output_data_bundle']
+        if 'output_data_path' in self.task_data:
+            del self.task_data['output_data_path']
+        if 'output_data_bundle' in self.task_data:
+            del self.task_data['output_data_bundle']
 
     def _remote_wdir(self):
         """ Builds remote working directory """

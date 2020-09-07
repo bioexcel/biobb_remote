@@ -91,7 +91,8 @@ Runs SFTP session on remote
 * input_file_path (**str**): Input file path or input string
 * output_file_path (**str**): Output file path
 
-## data_bundle.py
+## task.py
+**DataBundle**
 Class to manage bundles of input/output files
 ~~~
 data_bundle = DataBundle(bundle_id)
@@ -120,7 +121,7 @@ Generates a list of names or included files
 ~~~
 Generates a Json dump
 
-## task.py
+**Task**
 Abstract module to handle remote tasks. Not for direct use, extended to include specific queueing systems
 
 ### Constants
@@ -162,18 +163,6 @@ credentials (**SSHCredentials** | **str**): SSHCredentials object or a path to a
 Loads a pre-defined host configuration file 
 
 ~~~
-(void) task.set_modules(module_set)
-~~~
-Selects a predefined set of HPC modules to use. Module sets are defined in host configuration
-* module_set (**str** | **[str]**): Label of the module set, either single value or list
-
- ~~~
-(void) task.set_queue_settings(setting_id='default')
-~~~
-Selects a set of queueing settings from host configuration.
-* setting_id (**str**): Set to include
-
-~~~
 (void) task.set_custom_settings(self, ref_setting='default', patch=None)
 ~~~
 Generates a custom queue setting based on existing one
@@ -212,19 +201,6 @@ Generates a command line for queue script using command line version of the biob
 * properties (**str**): file path (yaml | json) or 1-line Json with the required biobb parameters
 
 ~~~
-(str) task.prepare_queue_script(queue_settings, modules, conda_env):
-~~~
-Generates remote script including queue settings and necessary modules
-* queue_settings (**str**): Label for set of queue controls (defined in host configuration)
-* modules (**str**): modules to activate (defined in host configuration)
-* conda_env (**str**): Conda environment to activate 
-
-~~~
-([str]) task.get_queue_settings_string_array()
-~~~
-Generates queue settings to include in script. Developed in inherited queue classes
-
-~~~
 (void) task.submit(queue_settings, modules, local_run_script, conda_env='', poll_time=0)
 ~~~
 Submits task 
@@ -235,12 +211,7 @@ Submits task
 * poll_time (**int**): if set polls periodically for job completion (seconds)
 
 ~~~
-(str) task.get_submitted_job_id()
-~~~
-Reports job id after submission, developed in inherited classes
-
-~~~
-(void) taskcancel(remove_data=False)
+(void) task.cancel(remove_data=False)
 ~~~
 Cancels running task
 * remove_data (**bool**): removes remote working directory
@@ -249,11 +220,6 @@ Cancels running task
 (str) task.check_queue()
 ~~~
 Check queue status. Returns output of the remote appropriate command
-
-~~~
-(int) check_job_status()
-~~~
-Checks and reports job status
 
 ~~~
 (void) check_job(update=True, poll_time=0)
