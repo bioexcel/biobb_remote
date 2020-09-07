@@ -90,12 +90,15 @@ class Task():
         self.task_data['id'] = self.id
         if mode == 'json':
             data = {'id': self.id}
+            for k in self.task_data:
+                data[k] = self.task_data[k]
             if 'local_data_bundle'  in self.task_data:
                 data['local_data_bundle'] = self.task_data['local_data_bundle'].to_json()
             if 'output_data_bundle'  in self.task_data:
                 data['output_data_bundle'] = self.task_data['output_data_bundle'].to_json()
             with open(save_file_path, 'w') as task_file:
                 json.dump(data, task_file, indent=3)
+            
         elif mode == "pickle":
             with open(save_file_path, 'wb') as task_file:
                 pickle.dump(self.task_data, task_file)
