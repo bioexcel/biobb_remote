@@ -450,8 +450,14 @@ class Task():
         return stdout, stderr
 
 
-    def get_output_data(self, local_data_path='', overwrite=False):
-        """ Downloads remote working dir contents to local """
+    def get_output_data(self, local_data_path='', files_only=None, overwrite=False):
+        """ Downloads remote working dir contents to local 
+            Args:
+                * local_data_path (**str**): Path to local working dir
+                * files_only (**[str]**): Only download files in list, if empty download all files 
+                * overwrite (**bool**): Overwarite local files id they exist
+        """
+        
         self._open_ssh_session()
 
         if not self.task_data['remote_base_path']:
@@ -469,7 +475,12 @@ class Task():
         if not os.path.exists(local_data_path):
             os.mkdir(local_data_path)
 
-        remote_file_list = self.ssh_session.run_sftp('listdir', self._remote_wdir())
+        
+        remote_file_list = []
+
+        for file in self.ssh_session.run_sftp('listdir', self._remote_wdir()):
+            if not files_only or file in files_only:
+                remote_file_list.append(file)
 
         output_data_bundle = DataBundle(self.task_data['id'] + '_output')
 
