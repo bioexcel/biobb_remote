@@ -47,6 +47,7 @@ class SSHCredentials():
         """ Generates RSA keys pair
             * nbits (**int**): number of bits the generated key
         """
+        self.key=RSAKey.generate(nbits)
         
     def get_public_key(self, suffix='@biobb'):
         """ Returns a readable public key suitable to add to authorized keys
