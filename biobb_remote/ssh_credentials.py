@@ -24,6 +24,7 @@ class SSHCredentials():
         self.userid = userid
         self.key = None
         self.user_ssh = None
+        self.sftp = None
         self.look_for_keys = look_for_keys
         self.remote_auth_keys = []
         if generate_key:
@@ -123,7 +124,7 @@ class SSHCredentials():
         else:
             print("Biobb Public key not found in remote")
 
-    def _set_user_ssh_session(self, sftp=True, debug=False):
+    def _set_user_ssh_session(self, debug=False):
         """ Internal. Opens a ssh session using user's keys """
         self.user_ssh = SSHClient()
         self.user_ssh.set_missing_host_key_policy(AutoAddPolicy())
@@ -139,13 +140,12 @@ class SSHCredentials():
         except AuthenticationException as err:
             sys.exit(err)
 
-        if sftp:
-            self.sftp = self.user_ssh.open_sftp()
+        self.sftp = self.user_ssh.open_sftp()
 
     def _get_remote_auth_keys(self):
         """ Internal. Obtains authorized keys on remote """
-        if not self.user_ssh:
-            self._set_user_ssh_session(sftp=True)
+        if not self.sftp:
+            self._set_user_ssh_session()
 
         try:
             with self.sftp.file('.ssh/authorized_keys', mode='r') as ak_file:
@@ -160,8 +160,8 @@ class SSHCredentials():
         if not self.remote_auth_keys:
             return True
 
-        if not self.user_ssh:
-            self._set_user_ssh_session(sftp=True)
+        if not self.sftp:
+            self._set_user_ssh_session()
 
         auth_file = '.ssh/authorized_keys'
         if file_ext:
