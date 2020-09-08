@@ -144,7 +144,7 @@ class SSHCredentials():
 
     def _get_remote_auth_keys(self):
         """ Internal. Obtains authorized keys on remote """
-        if not self.user_ssh:
+        if not self.sftp:
             self._set_user_ssh_session(sftp=True)
 
         try:
@@ -160,7 +160,7 @@ class SSHCredentials():
         if not self.remote_auth_keys:
             return True
 
-        if not self.user_ssh:
+        if not self.sftp:
             self._set_user_ssh_session(sftp=True)
 
         auth_file = '.ssh/authorized_keys'
