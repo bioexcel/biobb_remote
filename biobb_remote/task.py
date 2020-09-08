@@ -475,10 +475,15 @@ class Task():
         if not os.path.exists(local_data_path):
             os.mkdir(local_data_path)
 
+        remote_list_dir = self.ssh_session.run_sftp('listdir', self._remote_wdir())
+        
+        if files_only:
+            for file in files_only:
+                if file not in remote_list_dir:
+                    print("Warning: the file {} is not in the remote working dir".format(file))
         
         remote_file_list = []
-
-        for file in self.ssh_session.run_sftp('listdir', self._remote_wdir()):
+        for file in remote_list_dir:
             if not files_only or file in files_only:
                 remote_file_list.append(file)
 
