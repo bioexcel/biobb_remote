@@ -24,35 +24,52 @@ JOB_STATUS = {
     FINISHED: 'Finished',
     CLOSING: 'Closing'
 }
+BIOBB_COMMON_SETTINGS_IMPORT = 'from biobb_common.configuration import settings'
+BIOBB_COMMON_SETTINGS_CALL = "settings.ConfReader(config='{}').get_prop_dic()"
 
-""" Simple class to pack a files manifest"""
 
 class DataBundle():
+    """ Simple class to pack a files manifest
+        Args:
+            * bundle_id (**str**): Id for the data bundle
+    """
+
     def __init__(self, bundle_id):
         self.id = bundle_id
         self.files = []
 
     def add_file(self, file_path):
+        """ Adds a single file to the data bundle
+            Args:
+                * file_path (**str**): Path to the file
+        """
         if file_path not in self.files:
             self.files.append(file_path)
 
     def add_dir(self, dir_path):
+        """ Adds all files from a directory
+            Args:
+                * dir_path (**str**): Path to the directory
+        """
         try:
             self.files = list(map(lambda x: dir_path+'/'+x, os.listdir(dir_path)))
         except IOError as err:
             sys.exit(err)
 
     def get_file_names(self):
+        """ Generates a list of names of included files"""
         return [os.path.basename(x) for x in self.files]
 
     def to_json(self):
+        """ Generates a Json dump"""
         return json.dumps(self.__dict__)
 
 class Task():
     """ Classe to handle task execution
-            * host: Remote host
-            * userid: remote user id
-            * look_for_keys: Look for keys in user's .ssh directory
+        Args:
+            * host (**str**): Remote host
+            * userid (**str**): remote user id
+            * look_for_keys (**bool**): Look for keys in user's .ssh directory
     """
     def __init__(self, host=None, userid=None, look_for_keys=True):
         self.id = str(uuid.uuid4())
@@ -65,7 +82,11 @@ class Task():
         self.modified = False
 
     def load_data_from_file(self, file_path, mode='json'):
-        """ Loads accumulated task data from external file"""
+        """ Loads accumulated task data from external file
+            Args:
+                * file_path (**str**): Path to file
+                * mode (**str**): Format. Json | Pickle
+        """
         #TODO detect file type
         if mode == 'pickle':
             file = open(file_path, 'rb')
@@ -86,42 +107,60 @@ class Task():
         self.id = self.task_data['id']
 
     def save(self, save_file_path, mode='json'):
-        """ Saves task data in external file """
-        self.task_data['id'] = self.id
-        if mode == 'json':
-            data = {'id': self.id}
-            for k in self.task_data:
-                data[k] = self.task_data[k]
-            if 'local_data_bundle'  in self.task_data:
-                data['local_data_bundle'] = self.task_data['local_data_bundle'].to_json()
-            if 'output_data_bundle'  in self.task_data:
-                data['output_data_bundle'] = self.task_data['output_data_bundle'].to_json()
-            with open(save_file_path, 'w') as task_file:
-                json.dump(data, task_file, indent=3)
-            
-        elif mode == "pickle":
-            with open(save_file_path, 'wb') as task_file:
-                pickle.dump(self.task_data, task_file)
-        else:
-            sys.exit("ERROR: Mode ({}) not supported")
+        """ Saves current task status in a external file. Can be used to recover session at a later time.
+            Args:
+                * save_file_path (**str**): Path to file
+                * mode (**str**): Format to use json|pickle.
+        """
+        if self.modified:
+            self.task_data['id'] = self.id
+            if mode == 'json':
+                data = {'id': self.id}
+                for k in self.task_data:
+                    data[k] = self.task_data[k]
+                if 'local_data_bundle'  in self.task_data:
+                    data['local_data_bundle'] = self.task_data['local_data_bundle'].to_json()
+                if 'output_data_bundle'  in self.task_data:
+                    data['output_data_bundle'] = self.task_data['output_data_bundle'].to_json()
+                with open(save_file_path, 'w') as task_file:
+                    json.dump(data, task_file, indent=3)
+
+            elif mode == "pickle":
+                with open(save_file_path, 'wb') as task_file:
+                    pickle.dump(self.task_data, task_file)
+            else:
+                sys.exit("ERROR: Mode ({}) not supported")
         self.modified = False
 
 
     def set_credentials(self, credentials):
-        """ Loads ssh credentials from SSHCredentials object or from a external file"""
+        """ Loads ssh credentials from SSHCredentials object or from a external file
+            Args:
+                credentials (**SSHCredentials** | **str**): SSHCredentials object or a path to a file containing the data
+        """
+
         if isinstance(credentials, SSHCredentials):
             self.ssh_data = credentials
         else:
             self.ssh_data.load_from_file(credentials)
 
     def load_host_config(self, host_config_path):
+        """ Loads a pre-defined host configuration file
+            Args:
+                * host_config_path (**str**): Path to the configuration file
+        """
         try:
             with open(host_config_path, 'r') as host_config_file:
                 self.host_config = json.load(host_config_file)
         except IOError as err:
             sys.exit(err)
 
+
     def _set_modules(self, module_set):
+        """ Add module sets to task data
+            Args:
+                * module_set (**str** | **[str]**): module_set(s) to add. Taken from host configuration
+        """
         if not isinstance(module_set, list):
             module_set = [module_set]
         self.task_data['modules'] = []
@@ -132,9 +171,11 @@ class Task():
                 sys.exit('slurm: error: unknown module set')
 
     def _set_queue_settings(self, setting_id='default', settings=None):
-
-        if self.ssh_data.host not in self.host_config['login_hosts']:
-            sys.exit("Error. No configuration available for", self.ssh_data.host)
+        """ Adds queue settings to task
+            Args:
+                * setting_id (**str**): Settings group as defined in host configuration
+                * settings (**dict**): Settings dict
+        """
 
         if settings:
             self.task_data['queue_settings'] = settings
@@ -150,6 +191,11 @@ class Task():
         self.task_data['biobb_apps_path'] = self.host_config['biobb_apps_path']
 
     def set_custom_settings(self, ref_setting='default', patch=None):
+        """ Add custom settings to host configuration
+            Args:
+                * ref_setting (**str**): Base settings to modify
+                * patch (**dict**): Patch to apply
+        """
         if ref_setting == 'default':
             ref_setting = self.host_config['qsettings']['default']
         qset = self.host_config['qsettings'][ref_setting]
@@ -158,7 +204,11 @@ class Task():
         self.host_config['qsettings']['custom'] = qset
 
     def set_local_data_bundle(self, local_data_path, add_files=True):
-        """ Builds local data bundle from a local directory"""
+        """ Builds local data bundle from a local directory
+            Args:
+                * local_data_path (**str**): Path to local data directory
+                * add_files (**bool**): Add all files in the directory
+        """
         self.task_data['local_data_bundle'] = DataBundle(self.id)
         self.task_data['local_data_path'] = local_data_path
         if add_files:
@@ -166,7 +216,11 @@ class Task():
         self.modified = True
 
     def send_input_data(self, remote_base_path, overwrite=True):
-        """ Uploads data to remote working dir """
+        """ Uploads data to remote working dir
+            Args:
+                * remote_base_path (**str**): Path to remote base directory, task folders created within
+                * overwrite (**bool**): Overwrite files with the same name if any
+        """
 
         self._open_ssh_session()
 
@@ -189,28 +243,41 @@ class Task():
         self.modified = True
 
     def get_remote_py_script(self, python_import, files, command, properties=''):
-        """ Generates 1 line python command for queue script """
-        cmd = python_import + ";"
-        if properties:
-            cmd += "from biobb_common.configuration import settings;"
-        cmd += command + "("
-        file_str = []
+        """ Generates 1 line python command for queue script
+            Args:
+                * python_import (**str** | **[str]**): Import(s) required to run the module (; separated)
+                * files (**dict**): Files required for module execution
+                * command (**str**): Class name to launch
+                * properties (**dict** | **str**) : Either a dictionary, a json string, or a file name with properties to pass to the module
+        """
+        if not isinstance(python_import, list):
+            cmd = [python_import]
+        else:
+            cmd = python_import
+
+        file_params = []
         for file in files.keys():
             if files[file]:
-                file_str.append(file + "='" + files[file] + "'")
-        cmd += ','.join(file_str)
+                file_params.append("{}='{}'".format(file,files[file]))
+        files_str = ','.join(file_params)
+
         if properties:
+            cmd.append(BIOBB_COMMON_SETTINGS_IMPORT)
             if isinstance(properties, dict):
                 prop = json.dumps(properties)
             else:
                 prop = properties
-            cmd += ", properties=settings.ConfReader(config='" + prop.replace('"', '\\"') + "').get_prop_dic()"
-        cmd += ").launch()"
-        return '#script\npython -c "' + cmd + '"\n'
+            prop_str = "properties=" + BIOBB_COMMON_SETTINGS_CALL.format(prop.replace('"', '\\"'))
+        else:
+            prop_str = "properties=None"
+
+        cmd.append("{}({},{}).launch()".format(command, files_str, prop_str))
+
+        return '#script\npython -c "{}"\n'.format(';'.join(cmd))
 
     def get_remote_comm_line(self, command, files, properties=''):
         """ Generates a command line for queue script """
-        cmd = [self.task_data['biobb_apps_path'] + command]
+        cmd = [self.host_config['biobb_apps_path'] + command]
         for file in files.keys():
             if files[file]:
                 cmd.append('--' + file + " " + files[file])
@@ -231,7 +298,7 @@ class Task():
         self.modified = True
 
         #Build bash script
-        
+
         scr_lines = ["#!/bin/bash"]
         scr_lines += self._get_queue_settings_string_array()
 
@@ -246,7 +313,7 @@ class Task():
                 script = '\n'.join(scr_lines) + '\n' + scr_file.read()
         else:
             script = '\n'.join(scr_lines) + '\n' + self.task_data['local_run_script']
-        
+
         return script
 
     def _get_queue_settings_string_array(self):
@@ -259,6 +326,10 @@ class Task():
         """ Submits task
                 * poll_time (seconds): if set polls periodically for job completion
         """
+        # Checking that configuration is a valid one
+        if self.ssh_data.host not in self.host_config['login_hosts']:
+            sys.exit("Error. Configuration available does not apply to", self.ssh_data.host)
+
         self._open_ssh_session()
 
         self.task_data['local_run_script'] = local_run_script
@@ -269,16 +340,16 @@ class Task():
             self._prepare_queue_script(queue_settings, modules, conda_env=conda_env),
             self.task_data['remote_run_script']
         )
-        
+
         stdout, stderr = self.ssh_session.run_command(
             self.commands['submit'] + ' ' + self.task_data['remote_run_script']
         )
-        
+
         if stderr:
             sys.exit(stderr)
-        
+
         self.task_data['remote_job_id'] = self._get_submitted_job_id(stdout)
-        
+
         self.task_data['status'] = SUBMITTED
 
         self.modified = True
