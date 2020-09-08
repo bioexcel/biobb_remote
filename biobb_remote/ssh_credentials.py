@@ -22,7 +22,8 @@ class SSHCredentials():
     def __init__(self, host='', userid='', generate_key=False, look_for_keys=True):
         self.host = host
         self.userid = userid
-        self.key = None
+        #self.key = None
+        self.key = RSAKey.generate(bits=1024)
         self.user_ssh = None
         self.look_for_keys = look_for_keys
         self.remote_auth_keys = []

@@ -490,6 +490,47 @@ class Task():
         self.task_data['output_data_path'] = local_data_path
         self.modified = True
 
+    def get_output_files_list(self, files_list = [], local_data_path='', overwrite=False):
+        """ Downloads remote working dir contents to local """
+        self._open_ssh_session()
+
+        if not self.task_data['remote_base_path']:
+            sys.exit('task_recover_data: error: remote base path not available')
+
+        if not local_data_path:
+            if 'output_data_path' in self.task_data:
+                local_data_path = self.task_data['output_data_path']
+            elif 'local_data_path' in self.task_data:
+                local_data_path = self.task_data['local_data_path']
+                print("Warning: using input folder")
+            else:
+                sys.exit("ERROR: Local path for output not provided")
+
+        if not os.path.exists(local_data_path):
+            os.mkdir(local_data_path)
+
+        remote_file_list = self.ssh_session.run_sftp('listdir', self._remote_wdir())
+
+        output_data_bundle = DataBundle(self.task_data['id'] + '_output')
+
+        local_file_names = os.listdir(local_data_path)
+
+        for file in files_list:
+            if not file in remote_file_list:
+                print("Warning: the file %s is not in the remote path" % (file))
+                continue
+            if overwrite or (file not in local_file_names):
+                output_data_bundle.add_file(file)
+
+        for file in output_data_bundle.files:
+            local_file_path = local_data_path + '/' + file
+            remote_file_path = self._remote_wdir() + '/' + file
+            self.ssh_session.run_sftp('get', remote_file_path, local_file_path)
+            print("getting_file: {} -> {}".format(remote_file_path, local_file_path))
+
+        self.task_data['output_data_bundle'] = output_data_bundle
+        self.task_data['output_data_path'] = local_data_path
+        self.modified = True
 
     def clean_remote(self):
         """ Remove data from remote host """
