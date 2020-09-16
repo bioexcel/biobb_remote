@@ -82,6 +82,9 @@ class Task():
         else:
             sys.exit('slurm: error: unknown module set')
 
+    def set_conda_env(self, conda_env):
+        self.task_data['conda_env'] = conda_env
+    
     def set_queue_settings(self, setting_id='default', settings=None):
 
         host = self.ssh_data.host
@@ -161,14 +164,17 @@ class Task():
             cmd.append("-c '" + json.dumps(properties) + "'")
         return '#script\n' + ' '.join(cmd) + '\n'
 
-    def prepare_queue_script(self, queue_settings, modules):
+    def prepare_queue_script(self, queue_settings, modules, conda_env=''):
         """ Generates remote script including queue settings"""
-        ##TODO add custum queue_settings
         self.set_queue_settings(queue_settings)
         self.set_modules(modules)
+        self.set_conda(conda)
         
         scr_lines = ["#!/bin/sh"]
         scr_lines += self.get_queue_settings_string_array()
+        
+        if self.task_data['conda_env']:
+            scr_lines.append('conda activate ' + self.task_data['conda_env'])
         
         for mod in self.task_data['modules']:
             scr_lines.append('module load ' + mod)
