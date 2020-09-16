@@ -12,10 +12,13 @@ from paramiko import SSHClient, AutoAddPolicy, AuthenticationException, SSHExcep
 
 class SSHSession():
     """ Class wrapping ssh operations 
-            * ssh_data: SSHCredentials object
-            * credentials_path: Path to packed credentials file to use
+        Args:
+            * ssh_data (**SSHCredentials**): SSHCredentials object
+            * credentials_path (**str**): Path to packed credentials file to use
+            * debug (**bool**): Prints verbose debug information on connection
     """
-    def __init__(self, ssh_data=None, credentials_path=None):
+    
+    def __init__(self, ssh_data=None, credentials_path=None, debug=False):
         if ssh_data is None:
             self.ssh_data = SSHCredentials(credentials_path is None)
             if credentials_path:
@@ -24,7 +27,10 @@ class SSHSession():
             self.ssh_data = ssh_data
         self.ssh = SSHClient()
         self.ssh.set_missing_host_key_policy(AutoAddPolicy())
-        #paramiko.common.logging.basicConfig(level=paramiko.common.DEBUG)
+       
+        if debug:
+            paramiko.common.logging.basicConfig(level=paramiko.common.DEBUG)
+       
         try:
             self.ssh.connect(
                 self.ssh_data.host,
@@ -38,14 +44,27 @@ class SSHSession():
             sys.exit(err)
 
     def run_command(self, command):
-        """ Runs command on remote"""
+        """ Runs command on remote, produces stdout, stderr tuple
+            Args:
+                * command (**str**): Command to execute on remote
+        """
         if self.ssh:
             stdin, stdout, stderr = self.ssh.exec_command(command)
         return ''.join(stdout), ''.join(stderr)
 
 
     def run_sftp(self, oper, input_file_path, output_file_path=''):
-        """ Runs SFTP session on remote"""
+        """ Runs SFTP session on remote
+            Args:
+                * oper (**str**): Operation to perform, one of 
+                    * get (gets a single file from input_file_path (remote) to output_file_path (local) )
+                    * put (puts a single file from input_file_path (local) to output_file_path (remote)
+                    * create (creates a file in output_file_path (remote) from input_file_path string-
+                    * file (opens a remote file in input_file_path for read). Returns a file handle.
+                    * listdir (returns a list of files in remote input_file_path
+                * input_file_path (**str**): Input file path or input string
+                * output_file_path (**str**): Output file path
+        """
         sftp = self.ssh.open_sftp()
         try:
             if oper == 'get':
@@ -71,3 +90,4 @@ class SSHSession():
         except IOError as err:
             sys.exit(err)
         return False
+

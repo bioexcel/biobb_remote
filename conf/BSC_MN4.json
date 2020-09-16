@@ -19,11 +19,21 @@
             "nodes": 4,
             "time" : "01:00:00"
         },
+        "openMP_full_node_debug": {
+            "ntasks": 1,
+            "cpus-per-task" : 48,
+            "ntasks-per-node" : 1,
+            "nodes" : 1,
+            "time" : "01:00:00",
+            "qos": "debug"
+        },
+        
         "default" : "openMP_full_node"
     },
     "modules" :{
-        "biobb" : ["anaconda/2019.10", "biobb"],
-        "gromacs": ["impi", "intel", "fftw/3.3.8", "gromacs/2018.0"]
+        "conda" : ["ANACONDA/2019.10"],
+        "biobb" : ["ANACONDA/2019.10", "biobb"],
+        "gromacs": ["impi/2018.4", "intel/2018.4", "mkl/2018.4", "fftw/3.3.8", "gromacs/2019.1"]
     },
     "biobb_apps_path" : "/apps/BIOBB/3.0/conda/lib/python3.7/site-packages/",
     "login_hosts" : ["mn1.bsc.es", "mn2.bsc.es"]            

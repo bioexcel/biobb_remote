@@ -13,24 +13,26 @@ from paramiko import SSHClient, AutoAddPolicy, AuthenticationException, RSAKey
 
 class SSHCredentials():
     """ Generation of ssl credentials for remote execution
-            * host: Target host name
-            * userid: Target user id
-            * generate_key: Generate a pub/private key pair
-            * look_for_keys: Look for keys in user's .ssh directory if no key provided
+        Args 
+            * host (str): Target host name
+            * userid (str): Target user id
+            * generate_key (bool): Generate a pub/private key pair
+            * look_for_keys (bool): Look for keys in user's .ssh directory if no key provided
     """
     def __init__(self, host='', userid='', generate_key=False, look_for_keys=True):
         self.host = host
         self.userid = userid
         self.key = None
         self.user_ssh = None
+        self.sftp = None
         self.look_for_keys = look_for_keys
         self.remote_auth_keys = []
         if generate_key:
             self.generate_key()
 
     def load_from_file(self, credentials_path):
-        """ Obtain credentials from file 
-                * credentials_path: Path to packed credentials file
+        """ Recovers SSHCredentials object from disk file
+            * credentials_path (**str**): Path to packed credentials file.
         """
         try:
             file = open(credentials_path, 'rb')
@@ -43,16 +45,19 @@ class SSHCredentials():
         self.key = RSAKey.from_private_key(StringIO(data['data'].getvalue()))
 
     def generate_key(self, nbits=2048):
-        """ Generates new nbits Private Key """
-        self.key = RSAKey.generate(nbits)
-
+        """ Generates RSA keys pair
+            * nbits (**int**): number of bits the generated key
+        """
+        self.key=RSAKey.generate(nbits)
+        
     def get_public_key(self, suffix='@biobb'):
-        """ Returns a readable public key suitable to add to authorized_keys
-                *suffix: added to the end of public key for readibility
+        """ Returns a readable public key suitable to add to authorized keys
+            * suffix (**str**): Added to the key for identify it.
         """
         return '{} {} {}{}\n'.format(
             self.key.get_name(), self.key.get_base64(), self.userid, suffix
         )
+
     def get_private_key(self):
         """ Return a readable private key"""
         private = StringIO()
@@ -61,9 +66,9 @@ class SSHCredentials():
 
     def save(self, output_path, public_key_path=None, private_key_path=None):
         """ Save packed credentials on external file for re-usage
-                * output_path: Path to the packed credentials file
-                * public_key_path: Path to a standard public key file
-                * private_key_path: Path to a standard private key file
+            * output_path (**str**): Path to file  
+            * public_key_path (**str**): Path to a standard public key file
+            * private_key_path (**str**): Path to a standard private key file
         """
         with open(output_path, 'wb') as keys_file:
             private = StringIO()
@@ -85,7 +90,7 @@ class SSHCredentials():
 
     def check_host_auth(self):
         """ Check for public_key in remote .ssh/authorized_keys file
-                Requires users' SSH access to host
+            Requires users' SSH access to host
         """
         if not self.remote_auth_keys:
             self._get_remote_auth_keys()
@@ -93,7 +98,7 @@ class SSHCredentials():
 
     def install_host_auth(self, file_bck='bck'):
         """ Installs public_key on remote .ssh/authorized_keys file
-                Requires users' SSH access to host
+            Requires users' SSH access to host
         """
         if not self.check_host_auth():
             if file_bck:
@@ -107,7 +112,7 @@ class SSHCredentials():
 
     def remove_host_auth(self, file_bck='biobb'):
         """ Removes public_key from remote .ssh/authorized_keys file
-               Requires users' SSH access to host
+            Requires users' SSH access to host
         """
         if self.check_host_auth():
             if file_bck:
@@ -117,13 +122,16 @@ class SSHCredentials():
             self._put_remote_auth_keys()
             print("Biobb Public key removed from host")
         else:
-            print("Biobb Public key not found")
+            print("Biobb Public key not found in remote")
 
-    def _set_user_ssh_session(self, sftp=True):
+    def _set_user_ssh_session(self, debug=False):
         """ Internal. Opens a ssh session using user's keys """
         self.user_ssh = SSHClient()
         self.user_ssh.set_missing_host_key_policy(AutoAddPolicy())
-        #paramiko.common.logging.basicConfig(level=paramiko.common.DEBUG)
+        
+        if debug:
+            paramiko.common.logging.basicConfig(level=paramiko.common.DEBUG)
+        
         try:
             self.user_ssh.connect(
                 self.host,
@@ -132,13 +140,12 @@ class SSHCredentials():
         except AuthenticationException as err:
             sys.exit(err)
 
-        if sftp:
-            self.sftp = self.user_ssh.open_sftp()
+        self.sftp = self.user_ssh.open_sftp()
 
     def _get_remote_auth_keys(self):
         """ Internal. Obtains authorized keys on remote """
-        if not self.user_ssh:
-            self._set_user_ssh_session(sftp=True)
+        if not self.sftp:
+            self._set_user_ssh_session()
 
         try:
             with self.sftp.file('.ssh/authorized_keys', mode='r') as ak_file:
@@ -148,13 +155,13 @@ class SSHCredentials():
 
     def _put_remote_auth_keys(self, file_ext=''):
         """ Internal: Adds public_key to remote authorized_keys
-                * file_ext: optional file extension for backup of the original file
+            * file_ext: optional file extension for backup of the original file
         """
         if not self.remote_auth_keys:
             return True
 
-        if not self.user_ssh:
-            self._set_user_ssh_session(sftp=True)
+        if not self.sftp:
+            self._set_user_ssh_session()
 
         auth_file = '.ssh/authorized_keys'
         if file_ext:
