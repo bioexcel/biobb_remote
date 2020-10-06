@@ -43,7 +43,7 @@
         "default" : "openMP_full_node_debug"
     },
     "modules" :{
-        "gromacs": ["impi", "intel", "fftw/3.3.8", "gromacs/2018.0"]
+        "gromacs": ["gromacs/2019.1"]
     },
     "biobb_apps_path" : "",
     "login_hosts" : ["sl1.bsc.es", "sl2.bsc.es"],

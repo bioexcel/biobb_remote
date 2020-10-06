@@ -278,19 +278,21 @@ class Task():
 
         return '#script\npython -c "{}"\n'.format(';'.join(cmd))
 
-    def get_remote_comm_line(self, command, files, properties='', cmd_settings=''):
+    def get_remote_comm_line(self, command, files, use_biobb=False, properties='', cmd_settings=''):
         """ Generates a command line for queue script
             Args:
                 * command (**str**): Command to execute
                 * files (**dict**): Input/output files. "--" added if only parameter name is provided
+                * use_biobb (**bool**): Set to prepend biobb path on host
                 * properties (**dict**): BioBB properties
                 * cmd_settings (**dict**): Settings to add to command line
         """
         
-        if 'biobb_apps_path' in self.host_config:
+        if use_biobb and 'biobb_apps_path' in self.host_config:
             cmd = [self.host_config['biobb_apps_path'] + command]
         else:
             cmd = [command]
+        
         for file in files.keys():
             if files[file]:
                 if file[0] != '-':
@@ -298,14 +300,17 @@ class Task():
                 else:
                     cmd.append(file)
                 cmd.append(" " + files[file])
+        
         if properties:
-            cmd.append("-c '" + json.dumps(properties) + "'")
+            cmd_settings['-c']= "'" + json.dumps(properties) + "'"
+
         if cmd_settings:
             for k,v in cmd_settings.items():
                 if k in self.host_config['cmd_settings']:
                     cmd += [self.host_config['cmd_settings'][k]]
                 else:
-                    cmd += [k,str(v)]
+                    cmd += [k, str(v)]
+        
         return '#script\n' + ' '.join(cmd) + '\n'
 
     def _prepare_queue_script(self, queue_settings, modules, conda_env=''):
