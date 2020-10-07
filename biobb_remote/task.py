@@ -306,7 +306,7 @@ class Task():
 
         if cmd_settings:
             for k,v in cmd_settings.items():
-                if k in self.host_config['cmd_settings']:
+                if 'cmd_settings' in self.host_config and k in self.host_config['cmd_settings']:
                     cmd += [self.host_config['cmd_settings'][k]]
                 else:
                     cmd += [k, str(v)]
@@ -350,7 +350,7 @@ class Task():
         """
         return []
 
-    def submit(self, queue_settings='default', modules=None, local_run_script='', conda_env='', poll_time=0):
+    def submit(self, job_name=None, queue_settings='default', modules=None, local_run_script='', conda_env='', poll_time=0):
         """ Submits task
                 * poll_time (seconds): if set polls periodically for job completion
         """
@@ -362,6 +362,9 @@ class Task():
 
         self.task_data['local_run_script'] = local_run_script
         self.task_data['remote_run_script'] = self._remote_wdir() + '/run_script.sh'
+        
+        if job_name:
+            self.task_data['job_name'] = job_name
 
         self.ssh_session.run_sftp(
             'create',

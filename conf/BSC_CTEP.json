@@ -18,6 +18,7 @@
         "use_gpu": "-nb gpu -pme gpu",
         "dlb": "-dlb yes"
     },
+    "biobb_apps_path":"",
     "login_hosts" : ["plogin1.bsc.es", "plogin2.bsc.es"],
     "cores_per_node" : 160
 }
