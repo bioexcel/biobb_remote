@@ -193,17 +193,25 @@ class Task():
         else:
             self.task_data['biobb_apps_path'] = '.'
             
-    def set_custom_settings(self, ref_setting='default', patch=None):
+    def set_custom_settings(self, ref_setting='default', patch=None, clean=False):
         """ Add custom settings to host configuration
             Args:
                 * ref_setting (**str**): Base settings to modify
                 * patch (**dict**): Patch to apply
+                * clean (**bool**): Clean settings 
         """
         if ref_setting == 'default':
             ref_setting = self.host_config['qsettings']['default']
-        qset = self.host_config['qsettings'][ref_setting]
-        for k in patch.keys():
-            qset[k] = patch[k]
+        
+        if clean:
+            qset = {}
+        else:
+            qset = self.host_config['qsettings'][ref_setting]
+
+        if patch:
+            for k in patch.keys():
+                qset[k] = patch[k]
+        
         self.host_config['qsettings']['custom'] = qset
         
     def prep_auto_settings(self, total_cores=0, nodes=0, cpus_per_task=1,  num_gpus=0):
