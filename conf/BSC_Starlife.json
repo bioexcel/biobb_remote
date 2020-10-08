@@ -1,4 +1,5 @@
 {
+    "description": "Starlife (BSC)",
     "qsettings" :{
         "serial": {
             "ntasks": 1,
@@ -40,5 +41,7 @@
     },
     "biobb_apps_path" : "",
     "login_hosts" : ["sl1.bsc.es", "sl2.bsc.es"],
-    "nodes_per_node": 40
+    "nodes_per_node": 40,
+    "gpus_per_node": 0,
+    "min_cores_per_gpu" : 0
 }

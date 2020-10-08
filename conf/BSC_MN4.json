@@ -1,4 +1,5 @@
 {
+    "description": "MareNostrum 4 (BSC)",
     "qsettings" :{
         "serial": {
             "ntasks": 1,
@@ -37,5 +38,8 @@
     },
     "biobb_apps_path" : "/apps/BIOBB/3.0/conda/lib/python3.7/site-packages/",
     "login_hosts" : ["mn1.bsc.es", "mn2.bsc.es", "mn3.bsc.es"],
-    "cores_per_node": 48
+    "cores_per_node": 48,
+    "gpus_per_node": 0,
+    "min_cores_per_gpu" : 0
+
 }

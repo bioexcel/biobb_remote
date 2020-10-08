@@ -205,6 +205,54 @@ class Task():
         for k in patch.keys():
             qset[k] = patch[k]
         self.host_config['qsettings']['custom'] = qset
+        
+    def prep_auto_settings(self, total_cores=0, nodes=0, cpus_per_task=1,  num_gpus=0):
+        """ Prepare queue settings for balancing MPI/OMP/GPU.
+            Args:
+                * total_cores (**int**): Aproximated number of cores to use
+                * nodes (**int**): Number of complete nodes to use (overrides total_cores)
+                * cpus_per_task (**int**): OMP processes per MPI task to allocate
+                * num_gpus (**int**): Num of GPUs per node to allocate
+        """
+        if nodes:
+            total_cores = nodes * self.host_config['cores_per_node']
+
+        if num_gpus:
+            if self.host_config['gpus_per_node']:
+                if cpus_per_task < self.host_config['min_cores_per_gpu']:
+                    print("Warning: min cores per gpu is", self.host_config['min_cores_per_gpu'])
+                    cpus_per_task = self.host_config['min_cores_per_gpu']
+            else:
+                print("Warning: GPU not available at " + self.host_config['description'])
+                num_gpus = 0
+        
+        cpus_per_task = min(cpus_per_task, total_cores)
+        ntasks = int(total_cores / cpus_per_task)
+        ntasks_per_node = int(min(total_cores /cpus_per_task, self.host_config['cores_per_node'] / cpus_per_task))
+        nodes = int(max(1, total_cores / self.host_config['cores_per_node']))
+
+        if num_gpus:
+            if ntasks_per_node > num_gpus:
+                print("Warning: Num GPUs cannot be less than ntasks per node")
+                num_gpus = ntasks_per_node
+                
+        if ntasks != ntasks_per_node * nodes:
+            print('Warning: ntasks adjunted to match requested configuration')
+            ntasks = ntasks_per_node * nodes
+        
+        settings = {
+            'ntasks' : ntasks,
+            'cpus-per-task': cpus_per_task,
+            'ntasks-per-node': ntasks_per_node,
+            'nodes' : nodes
+        }
+        if num_gpus:
+            settings['gres'] = 'gpu:' +str(num_gpus)
+        #For Gromacs
+        if ntasks > 1 and cpus_per_task > 6:
+            print("Warning: requesting more OMP tasks than recommended, use -ntomp to force")
+            
+        return settings
 
     def set_local_data_bundle(self, local_data_path, add_files=True):
         """ Builds local data bundle from a local directory
