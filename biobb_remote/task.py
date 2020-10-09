@@ -408,8 +408,13 @@ class Task():
 
     def submit(self, job_name=None, queue_settings='default', modules=None, local_run_script='', conda_env='', poll_time=0):
         """ Submits task
-                * poll_time (seconds): if set polls periodically for job completion
-        """
+            Args:
+                * job_name (**str**): Job name to display (optional, used to identify queue jobs, and stdout/stderr logs)
+                * queue_settings (**str**): Label for set of queue controls (defined in host configuration)
+                * modules (**str**): modules to activate (defined in host configuration)
+                * conda_env (**str**): Conda environment to activate 
+                * local_run_script (**str**): Path to local script to run or a string with the script itself (identified by leading '#' tag)
+                * poll_time (**int**): if set polls periodically for job completion (seconds)        """
         # Checking that configuration is a valid one
         if self.ssh_data.host not in self.host_config['login_hosts']:
             sys.exit("Error. Configuration available does not apply to", self.ssh_data.host)
@@ -452,7 +457,10 @@ class Task():
         return ''
 
     def cancel(self, remove_data=False):
-        """ Cancels running task """
+        """ Cancels running task 
+            Args:
+            * remove_data (**bool**): removes remote working directory
+        """
 
         if self.task_data['status'] in [SUBMITTED, RUNNING]:
             self._open_ssh_session()
@@ -536,7 +544,7 @@ class Task():
 
         return stdout, stderr
 
-
+ 
     def get_output_data(self, local_data_path='', files_only=None, overwrite=False):
         """ Downloads remote working dir contents to local 
             Args:
