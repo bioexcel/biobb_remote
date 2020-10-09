@@ -1,6 +1,14 @@
 {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "http://bioexcel.eu/biobb_remote/conf/1.0/host_config",
+    "title": "Schema to specify remote host configuration files",
     "type": "object",
-    "required" : ["description", "login_hosts", "cores_per_node", "gpus_per_node"],
+    "required" : [
+        "description", 
+        "login_hosts", 
+        "cores_per_node", 
+        "gpus_per_node"
+    ],
     "properties": {
         "description": {
             "description": "Short title for the host",
@@ -9,14 +17,18 @@
         "login_hosts" : {
             "type":"array",
             "description": "Accepted login hosts",
-            "items": {"type":"string"}
+            "items": {"type":"string", "description": "FQDN host names for the login nodes"}
         },
         "cores_per_node" : {
             "description": "Number of cores per node",
             "type": "integer"
         },
         "gpus_per_node": {
-            "description": "Number of gpus per node",
+            "description": "Number of gpus per node, 0 if no GPUs available ",
+            "type": "integer"
+        },
+        "limit_nodes": {
+            "description": "Max number of nodes that can be allocated",
             "type": "integer"
         },
         "min_cores_per_gpu" : {
@@ -30,18 +42,39 @@
                 "type": "object",
                 "required": ["ntasks", "cpus-per_task"],
                 "properties": {
-                    "ntasks": {"type":"integer"},
-                    "cpus-per-task" : {"type":"integer"},
-                    "ntasks-per-node" : {"type":"integer"},
-                    "nodes" : {"type":"integer"},
-                    "gres": {"type":"string"},
-                    "time" : {"type":"string"},
-                    "qos" : {"type": "string"}
+                    "ntasks": {
+                        "description": "Number of MPI tasks",
+                        "type":"integer"
+                    },
+                    "cpus-per-task" : {
+                        "description": "Number of threads per MPI task",
+                        "type":"integer"
+                    },
+                    "ntasks-per-node" : {
+                        "description": "Number of MPI tasks per node",
+                        "type":"integer"
+                    },
+                    "nodes" : {
+                        "description": "Number of nodes to reserve, can be exclusive access depending on host",
+                        "type":"integer"
+                    },
+                    "gres": {
+                        "description": "Additional resurces, ex. GPUs",
+                        "type":"string"
+                    },
+                    "time" : {
+                        "description": "Limit Wall time d-hh:mm:ss",
+                        "type":"string"
+                    },
+                    "qos" : {
+                        "description": "QOS settings, ej debug",
+                        "type": "string"
+                    }
                 }
             }
         },
         "default" : {
-            "description": "default settings label",
+            "description": "label from qsettings used as default",
             "type": "string"
         },
         "modules" :{
@@ -52,10 +85,11 @@
             }
         },
         "cmd_settings":{
-            "description": "Predefined command line settings",
+            "description": "Predefined command line settings to be directly added",
             "type": "object",
             "additionalProperties": {
-                "type": "string"
+                "type": "string",
+                "description": "Label and text"
             }
         },
         "biobb_apps_path": {
