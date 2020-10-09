@@ -1,27 +1,66 @@
 {
-    "description": "CTE_Power(BSC)",
-    "qsettings" :{
-        "openMP_64_1GPU_debug": {
-            "ntasks": 1,
-            "cpus-per-task" : 64,
-            "ntasks-per-node" : 1,
-            "nodes" : 1,
-            "gres": "gpu:1",
-            "time" : "01:00:00",
-            "qos" : "debug"
+    "type": "object",
+    "required" : ["description", "login_hosts", "cores_per_node", "gpus_per_node"],
+    "properties": {
+        "description": {
+            "description": "Short title for the host",
+            "type": "string"
         },
-        "default" : "openMP_64_1GPU_debug"
-    },
-    "modules" :{
-        "gromacs": ["gcc/6.4.0","openmpi/3.0.0", "cuda/10.2", "gromacs/2020.1"]
-    },
-    "cmd_settings":{
-        "use_gpu": "-nb gpu -pme gpu",
-        "dlb": "-dlb yes"
-    },
-    "biobb_apps_path":"",
-    "login_hosts" : ["plogin1.bsc.es", "plogin2.bsc.es"],
-    "cores_per_node" : 160,
-    "gpus_per_node": 4,
-    "min_cores_per_gpu" : 40
+        "login_hosts" : {
+            "type":"array",
+            "description": "Accepted login hosts",
+            "items": {"type":"string"}
+        },
+        "cores_per_node" : {
+            "description": "Number of cores per node",
+            "type": "integer"
+        },
+        "gpus_per_node": {
+            "description": "Number of gpus per node",
+            "type": "integer"
+        },
+        "min_cores_per_gpu" : {
+            "description": "Minimuyn number of cores per gpu",
+            "type": "integer"
+        },
+        "qsettings" :{
+            "description": "Pre-set queue settings",
+            "type": "object",
+            "additionalProperties": {
+                "type": "object",
+                "required": ["ntasks", "cpus-per_task"],
+                "properties": {
+                    "ntasks": {"type":"integer"},
+                    "cpus-per-task" : {"type":"integer"},
+                    "ntasks-per-node" : {"type":"integer"},
+                    "nodes" : {"type":"integer"},
+                    "gres": {"type":"string"},
+                    "time" : {"type":"string"},
+                    "qos" : {"type": "string"}
+                }
+            }
+        },
+        "default" : {
+            "description": "default settings label",
+            "type": "string"
+        },
+        "modules" :{
+            "description": "Module bundles",
+            "additionalProperties": {
+                "type": "array",
+                "items": {"type":"string", "description": "module name"}
+            }
+        },
+        "cmd_settings":{
+            "description": "Predefined command line settings",
+            "type": "object",
+            "additionalProperties": {
+                "type": "string"
+            }
+        },
+        "biobb_apps_path": {
+            "type": "string",
+            "description": "common prefix to biobb root directory on remote host"
+        }
+    }
 }
