@@ -33,6 +33,10 @@
             "nodes": 8,
             "time" : "3-00:00:00"
         },
+        "debug": {
+            "qos": "debug",
+            "time":"1:00:00"
+        },
         "default" : "openMP_full_node"
     },
     "modules" :{
@@ -43,5 +47,6 @@
     "login_hosts" : ["sl1.bsc.es", "sl2.bsc.es"],
     "cores_per_node": 40,
     "gpus_per_node": 0,
-    "min_cores_per_gpu" : 0
+    "min_cores_per_gpu" : 0,
+    "queues_command": ["module load bsc", "bsc_queues"]
 }

@@ -38,9 +38,33 @@
         "qsettings" :{
             "description": "Pre-set queue settings",
             "type": "object",
+            "required":["debug","default","serial"],
+            "debug": {
+                "type": "object",
+                "additionalProperties":{"type":"string"}
+            },
+            "default" : {
+                "description": "label used as default",
+                "type": "string"
+            },
+            "serial" : {
+                "type":"object",
+                "properties": {
+                    "ntasks": {
+                        "description": "Number of MPI tasks",
+                        "type":"integer",
+                        "maxvalue": 1
+                    },
+                    "cpus-per-task" : {
+                        "description": "Number of threads per MPI task",
+                        "type":"integer",
+                        "maxvalue": 1
+                    }
+                }
+            },
             "additionalProperties": {
                 "type": "object",
-                "required": ["ntasks", "cpus-per_task"],
+                "required": ["ntasks", "cpus-per_task","time"],
                 "properties": {
                     "ntasks": {
                         "description": "Number of MPI tasks",
@@ -67,15 +91,11 @@
                         "type":"string"
                     },
                     "qos" : {
-                        "description": "QOS settings, ej debug",
+                        "description": "QOS settings, ex debug",
                         "type": "string"
                     }
                 }
             }
-        },
-        "default" : {
-            "description": "label from qsettings used as default",
-            "type": "string"
         },
         "modules" :{
             "description": "Module bundles",
@@ -95,6 +115,11 @@
         "biobb_apps_path": {
             "type": "string",
             "description": "common prefix to biobb root directory on remote host"
+        },
+        "queues_command" : {
+            "description": "Command required to get queues information",
+            "type": "array",
+            "items" : {"type": "string"}
         }
     }
 }

@@ -32,10 +32,6 @@ class Slurm(Task):
 
     def _get_queue_settings_string_array(self):
         scr_lines = []
-        if 'job_name' in self.task_data and self.task_data['job_name']:
-            self.task_data['queue_settings']['job'] = self.task_data['job_name']
-            self.task_data['queue_settings']['stdout'] = self.task_data['job_name'] + '.out'
-            self.task_data['queue_settings']['stderr'] = self.task_data['job_name'] + '.err'
 
         for key in self.task_data['queue_settings']:
             scr_lines.append(

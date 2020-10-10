@@ -83,6 +83,8 @@ class SSHSession():
                 return sftp.listdir(input_file_path)
 #            elif oper == 'rmdir':
 #                return sftp.rmdir(input_file_path)
+            elif oper == 'lstat':
+                return sftp.lstat(input_file_path)
             else:
                 print('Unknown sftp command', oper)
                 return True
