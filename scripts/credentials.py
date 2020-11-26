@@ -1,4 +1,4 @@
-#! /usr/bin/python3
+#!/usr/bin/env python
 """ Module to handle ssh credentials (userid, host, private_keys) """
 
 __author__ = "gelpi"
@@ -7,9 +7,8 @@ __date__ = "$08-March-2019 17:32:38$"
 import sys
 import argparse
 import os
-from biobb_remote.ssh_credentials import SSHCredentials
-import paramiko
 from paramiko import SSHClient, AutoAddPolicy, AuthenticationException
+from biobb_remote.ssh_credentials import SSHCredentials
 
 ARGPARSE = argparse.ArgumentParser(
     description='Credentials manager for biobb_remote'

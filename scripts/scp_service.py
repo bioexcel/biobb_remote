@@ -1,4 +1,4 @@
-#! /usr/bin/python3
+#!/usr/bin/env python
 
 """ Command-line wrapper to SCP for biobb_remote """
 

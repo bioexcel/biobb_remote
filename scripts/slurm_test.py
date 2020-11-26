@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python
 """ Test script for slurm remote interface """
 
 import sys
