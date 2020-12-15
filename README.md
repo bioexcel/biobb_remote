@@ -187,7 +187,8 @@ Generates queue configuration settings for balancing MPI/OMP/GPU.
 * cpus_per_task (**int**): OMP processes per MPI task to allocate
 * num_gpus (**int**): Num of GPUs per node to allocate
 
-(void) task.set_local_data_bundle(local_data_path, add_files=True):
+~~~
+(void) task.set_local_data_bundle(local_data_path, add_files=True)
 ~~~
 Builds local data bundle from a local directory
 * local_data_path (**str**): Path to local data directory
