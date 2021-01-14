@@ -147,6 +147,7 @@ class Task():
             self.ssh_data = credentials
         else:
             self.ssh_data.load_from_file(credentials)
+
 # Host config management
     def load_host_config(self, host_config_path):
         """ Loads a pre-defined host configuration file
@@ -271,7 +272,7 @@ class Task():
                 num_gpus = ntasks_per_node
 
         if ntasks != ntasks_per_node * nodes:
-            print('Warning: ntasks adjunted to match requested configuration')
+            print('Warning: ntasks adjusted to match requested configuration')
             ntasks = ntasks_per_node * nodes
 
         settings = {
@@ -281,7 +282,7 @@ class Task():
             'nodes' : nodes
         }
         if num_gpus:
-            settings['gres'] = 'gpu:' +str(num_gpus)
+            settings['gres'] = 'gpu:' + str(num_gpus)
         #For Gromacs
         if ntasks > 1 and cpus_per_task > 6:
             print("Warning: requesting more OMP tasks than recommended, use -ntomp to force")
@@ -577,7 +578,7 @@ class Task():
         self._open_ssh_session()
         stats = {}
         for file in self.ssh_session.run_sftp('listdir', self._remote_wdir()):
-            stats[file] = self.ssh_session.run_sftp('lstat',self._remote_wdir() + "/" + file)
+            stats[file] = vars(self.ssh_session.run_sftp('lstat',self._remote_wdir() + "/" + file))
         return stats
         
     def get_output_data(self, local_data_path='', files_only=None, overwrite=False):
@@ -598,7 +599,7 @@ class Task():
                 local_data_path = self.task_data['output_data_path']
             elif 'local_data_path' in self.task_data:
                 local_data_path = self.task_data['local_data_path']
-                print("Warning: using input folder")
+                print("Warning: using original input folder")
             else:
                 sys.exit("ERROR: Local path for output not provided")
 
@@ -625,7 +626,7 @@ class Task():
         for file in remote_file_list:
             if overwrite or (file not in local_file_names):
                 output_data_bundle.add_file(file)
-                output_data_bundle.file_stats[file] = self.ssh_session.run_sftp('lstat', self._remote_wdir() + '/' + file)
+                output_data_bundle.file_stats[file] = vars(self.ssh_session.run_sftp('lstat', self._remote_wdir() + '/' + file))
 
         for file in output_data_bundle.files:
             local_file_path = local_data_path + '/' + file
