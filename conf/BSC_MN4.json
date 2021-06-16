@@ -36,5 +36,6 @@
         "gromacs": ["impi/2018.4", "intel/2018.4", "mkl/2018.4", "fftw/3.3.8", "gromacs/2019.1"]
     },
     "biobb_apps_path" : "/apps/BIOBB/3.0/conda/lib/python3.7/site-packages/",
-    "login_hosts" : ["mn1.bsc.es", "mn2.bsc.es"]            
+    "login_hosts" : ["mn1.bsc.es", "mn2.bsc.es"],
+    "cores_per_node": 48
 }

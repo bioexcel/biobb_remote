@@ -188,8 +188,11 @@ class Task():
         self.task_data['queue_settings']['stdout'] = 'job.out'
         self.task_data['queue_settings']['stderr'] = 'job.err'
         self.task_data['queue_settings']['working_dir'] = self._remote_wdir()
-        self.task_data['biobb_apps_path'] = self.host_config['biobb_apps_path']
-
+        if 'biobb_apps_path' in self.host_config:
+            self.task_data['biobb_apps_path'] = self.host_config['biobb_apps_path']
+        else:
+            self.task_data['biobb_apps_path'] = '.'
+            
     def set_custom_settings(self, ref_setting='default', patch=None):
         """ Add custom settings to host configuration
             Args:
@@ -275,14 +278,34 @@ class Task():
 
         return '#script\npython -c "{}"\n'.format(';'.join(cmd))
 
-    def get_remote_comm_line(self, command, files, properties=''):
-        """ Generates a command line for queue script """
-        cmd = [self.host_config['biobb_apps_path'] + command]
+    def get_remote_comm_line(self, command, files, properties='', cmd_settings=''):
+        """ Generates a command line for queue script
+            Args:
+                * command (**str**): Command to execute
+                * files (**dict**): Input/output files. "--" added if only parameter name is provided
+                * properties (**dict**): BioBB properties
+                * cmd_settings (**dict**): Settings to add to command line
+        """
+        
+        if 'biobb_apps_path' in self.host_config:
+            cmd = [self.host_config['biobb_apps_path'] + command]
+        else:
+            cmd = [command]
         for file in files.keys():
             if files[file]:
-                cmd.append('--' + file + " " + files[file])
+                if file[0] != '-':
+                    cmd.append('--' + file)
+                else:
+                    cmd.append(file)
+                cmd.append(" " + files[file])
         if properties:
             cmd.append("-c '" + json.dumps(properties) + "'")
+        if cmd_settings:
+            for k,v in cmd_settings.items():
+                if k in self.host_config['cmd_settings']:
+                    cmd += [self.host_config['cmd_settings'][k]]
+                else:
+                    cmd += [k,str(v)]
         return '#script\n' + ' '.join(cmd) + '\n'
 
     def _prepare_queue_script(self, queue_settings, modules, conda_env=''):
@@ -322,7 +345,7 @@ class Task():
         """
         return []
 
-    def submit(self, queue_settings='', modules=None, local_run_script='', conda_env='', poll_time=0):
+    def submit(self, queue_settings='default', modules=None, local_run_script='', conda_env='', poll_time=0):
         """ Submits task
                 * poll_time (seconds): if set polls periodically for job completion
         """
