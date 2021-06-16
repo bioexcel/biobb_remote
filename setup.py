@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="biobb_remote",
-    version="0.0.0",
+    version="1.0.0",
     author="Biobb developers",
     author_email="gelpi@ub.edu",
     description="Biobb_remote is the Biobb module for remote execution via ssl.",

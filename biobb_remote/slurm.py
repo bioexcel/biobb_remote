@@ -32,6 +32,7 @@ class Slurm(Task):
 
     def _get_queue_settings_string_array(self):
         scr_lines = []
+
         for key in self.task_data['queue_settings']:
             scr_lines.append(
                 '#SBATCH {}{}'.format(
@@ -39,6 +40,7 @@ class Slurm(Task):
                     self.task_data['queue_settings'][key]
                 )
             )
+
         return scr_lines
 
     def _get_submitted_job_id(self, submit_output):

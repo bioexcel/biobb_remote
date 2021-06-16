@@ -34,9 +34,11 @@ class DataBundle():
             * bundle_id (**str**): Id for the data bundle
     """
 
-    def __init__(self, bundle_id):
+    def __init__(self, bundle_id, remote=False):
         self.id = bundle_id
         self.files = []
+        self.file_stats = {}
+        self.remote = remote
 
     def add_file(self, file_path):
         """ Adds a single file to the data bundle
@@ -45,6 +47,8 @@ class DataBundle():
         """
         if file_path not in self.files:
             self.files.append(file_path)
+        if not self.remote:
+            self.file_stats[file_path] = os.stat(file_path)
 
     def add_dir(self, dir_path):
         """ Adds all files from a directory
@@ -59,7 +63,7 @@ class DataBundle():
     def get_file_names(self):
         """ Generates a list of names of included files"""
         return [os.path.basename(x) for x in self.files]
-
+    
     def to_json(self):
         """ Generates a Json dump"""
         return json.dumps(self.__dict__)
@@ -132,7 +136,7 @@ class Task():
                 sys.exit("ERROR: Mode ({}) not supported")
         self.modified = False
 
-
+# Credential management
     def set_credentials(self, credentials):
         """ Loads ssh credentials from SSHCredentials object or from a external file
             Args:
@@ -144,6 +148,7 @@ class Task():
         else:
             self.ssh_data.load_from_file(credentials)
 
+# Host config management
     def load_host_config(self, host_config_path):
         """ Loads a pre-defined host configuration file
             Args:
@@ -155,7 +160,16 @@ class Task():
         except IOError as err:
             sys.exit(err)
 
+    def get_queue_info(self):
+        if 'queues_command' in self.host_config and self.host_config['queues_command']:
+            self._open_ssh_session()
+            data = self.ssh_session.run_command(";".join(self.host_config['queues_command']))
+        else:
+            print("Warning: command not available on " + self.host_config['description'])
+            data = ''
+        return data[0]
 
+# Job settings
     def _set_modules(self, module_set):
         """ Add module sets to task data
             Args:
@@ -170,42 +184,112 @@ class Task():
             else:
                 sys.exit('slurm: error: unknown module set')
 
-    def _set_queue_settings(self, setting_id='default', settings=None):
+    def _set_queue_settings(self, setting_id='default', settings=None, set_debug=False):
         """ Adds queue settings to task
             Args:
                 * setting_id (**str**): Settings group as defined in host configuration
                 * settings (**dict**): Settings dict
         """
-
         if settings:
             self.task_data['queue_settings'] = settings
-        elif setting_id == 'default':
-            self.task_data['queue_settings'] = self.host_config['qsettings'][self.host_config['qsettings']['default']]
         else:
-            self.task_data['queue_settings'] = self.host_config['qsettings'][setting_id]
+            self.task_data['queue_settings'] = {}
+            if setting_id == 'default':
+                ref_settings = self.host_config['qsettings'][self.host_config['qsettings']['default']]
+            else:
+                ref_settings = self.host_config['qsettings'][setting_id]
+            for k,v in ref_settings.items():
+                self.task_data['queue_settings'][k] = v
+        if 'job_name' in self.task_data and self.task_data['job_name']:
+            self.task_data['queue_settings']['job'] = self.task_data['job_name']
+            self.task_data['queue_settings']['stdout'] = self.task_data['job_name'] + '.out'
+            self.task_data['queue_settings']['stderr'] = self.task_data['job_name'] + '.err'
+        else:
+            self.task_data['queue_settings']['job'] = self.id
+            self.task_data['queue_settings']['stdout'] = 'job.out'
+            self.task_data['queue_settings']['stderr'] = 'job.err'
 
-        self.task_data['queue_settings']['job'] = self.id
-        self.task_data['queue_settings']['stdout'] = 'job.out'
-        self.task_data['queue_settings']['stderr'] = 'job.err'
         self.task_data['queue_settings']['working_dir'] = self._remote_wdir()
+
         if 'biobb_apps_path' in self.host_config:
             self.task_data['biobb_apps_path'] = self.host_config['biobb_apps_path']
         else:
             self.task_data['biobb_apps_path'] = '.'
-            
-    def set_custom_settings(self, ref_setting='default', patch=None):
+
+        if set_debug:
+            for k,v in self.host_config['qsettings']['debug'].items():
+                self.task_data['queue_settings'][k] = v
+
+    def set_custom_settings(self, ref_setting='default', patch=None, clean=False):
         """ Add custom settings to host configuration
             Args:
                 * ref_setting (**str**): Base settings to modify
                 * patch (**dict**): Patch to apply
+                * clean (**bool**): Clean settings
         """
         if ref_setting == 'default':
             ref_setting = self.host_config['qsettings']['default']
-        qset = self.host_config['qsettings'][ref_setting]
-        for k in patch.keys():
-            qset[k] = patch[k]
+
+        if clean:
+            qset = {}
+        else:
+            qset = self.host_config['qsettings'][ref_setting]
+
+        if patch:
+            for k in patch.keys():
+                qset[k] = patch[k]
+
         self.host_config['qsettings']['custom'] = qset
 
+    def prep_auto_settings(self, total_cores=0, nodes=0, cpus_per_task=1,  num_gpus=0):
+        """ Prepare queue settings for balancing MPI/OMP/GPU.
+            Args:
+                * total_cores (**int**): Aproximated number of cores to use
+                * nodes (**int**): Number of complete nodes to use (overrides total_cores)
+                * cpus_per_task (**int**): OMP processes per MPI task to allocate
+                * num_gpus (**int**): Num of GPUs per node to allocate
+        """
+        if nodes:
+            total_cores = nodes * self.host_config['cores_per_node']
+
+        if num_gpus:
+            if self.host_config['gpus_per_node']:
+                if cpus_per_task < self.host_config['min_cores_per_gpu']:
+                    print("Warning: min cores per gpu is", self.host_config['min_cores_per_gpu'])
+                    cpus_per_task = self.host_config['min_cores_per_gpu']
+            else:
+                print("Warning: GPU not available at " + self.host_config['description'])
+                num_gpus = 0
+
+        cpus_per_task = min(cpus_per_task, total_cores)
+        ntasks = int(total_cores / cpus_per_task)
+        ntasks_per_node = int(min(total_cores /cpus_per_task, self.host_config['cores_per_node'] / cpus_per_task))
+        nodes = int(max(1, total_cores / self.host_config['cores_per_node']))
+
+        if num_gpus:
+            if ntasks_per_node > num_gpus:
+                print("Warning: Num GPUs cannot be less than ntasks per node")
+                num_gpus = ntasks_per_node
+
+        if ntasks != ntasks_per_node * nodes:
+            print('Warning: ntasks adjusted to match requested configuration')
+            ntasks = ntasks_per_node * nodes
+
+        settings = {
+            'ntasks' : ntasks,
+            'cpus-per-task': cpus_per_task,
+            'ntasks-per-node': ntasks_per_node,
+            'nodes' : nodes
+        }
+        if num_gpus:
+            settings['gres'] = 'gpu:' + str(num_gpus)
+        #For Gromacs
+        if ntasks > 1 and cpus_per_task > 6:
+            print("Warning: requesting more OMP tasks than recommended, use -ntomp to force")
+
+        return settings
+
+# Job submission
     def set_local_data_bundle(self, local_data_path, add_files=True):
         """ Builds local data bundle from a local directory
             Args:
@@ -278,19 +362,21 @@ class Task():
 
         return '#script\npython -c "{}"\n'.format(';'.join(cmd))
 
-    def get_remote_comm_line(self, command, files, properties='', cmd_settings=''):
+    def get_remote_comm_line(self, command, files, use_biobb=False, properties='', cmd_settings=''):
         """ Generates a command line for queue script
             Args:
                 * command (**str**): Command to execute
                 * files (**dict**): Input/output files. "--" added if only parameter name is provided
+                * use_biobb (**bool**): Set to prepend biobb path on host
                 * properties (**dict**): BioBB properties
                 * cmd_settings (**dict**): Settings to add to command line
         """
-        
-        if 'biobb_apps_path' in self.host_config:
+
+        if use_biobb and 'biobb_apps_path' in self.host_config:
             cmd = [self.host_config['biobb_apps_path'] + command]
         else:
             cmd = [command]
+
         for file in files.keys():
             if files[file]:
                 if file[0] != '-':
@@ -298,22 +384,25 @@ class Task():
                 else:
                     cmd.append(file)
                 cmd.append(" " + files[file])
+
         if properties:
-            cmd.append("-c '" + json.dumps(properties) + "'")
+            cmd_settings['-c']= "'" + json.dumps(properties) + "'"
+
         if cmd_settings:
             for k,v in cmd_settings.items():
-                if k in self.host_config['cmd_settings']:
+                if 'cmd_settings' in self.host_config and k in self.host_config['cmd_settings']:
                     cmd += [self.host_config['cmd_settings'][k]]
                 else:
-                    cmd += [k,str(v)]
+                    cmd += [k, str(v)]
+
         return '#script\n' + ' '.join(cmd) + '\n'
 
-    def _prepare_queue_script(self, queue_settings, modules, conda_env=''):
+    def _prepare_queue_script(self, queue_settings, modules, conda_env='', set_debug=False):
         """ Generates remote script including queue settings"""
 
         # Add to self.task_data
         if queue_settings:
-            self._set_queue_settings(queue_settings)
+            self._set_queue_settings(queue_settings, set_debug=set_debug)
         if modules:
             self._set_modules(modules)
         if conda_env:
@@ -345,10 +434,16 @@ class Task():
         """
         return []
 
-    def submit(self, queue_settings='default', modules=None, local_run_script='', conda_env='', poll_time=0):
+    def submit(self, job_name=None, set_debug=False, queue_settings='default', modules=None, local_run_script='', conda_env='', poll_time=0):
         """ Submits task
-                * poll_time (seconds): if set polls periodically for job completion
-        """
+            Args:
+                * job_name (**str**): Job name to display (optional, used to identify queue jobs, and stdout/stderr logs)
+                * set_debug (**bool**): Adjust queue settings to debug QoS (as defined in host configuration)
+                * queue_settings (**str**): Label for set of queue controls (defined in host configuration)
+                * modules (**str**): modules to activate (defined in host configuration)
+                * conda_env (**str**): Conda environment to activate
+                * local_run_script (**str**): Path to local script to run or a string with the script itself (identified by leading '#' tag)
+                * poll_time (**int**): if set polls periodically for job completion (seconds)        """
         # Checking that configuration is a valid one
         if self.ssh_data.host not in self.host_config['login_hosts']:
             sys.exit("Error. Configuration available does not apply to", self.ssh_data.host)
@@ -358,9 +453,12 @@ class Task():
         self.task_data['local_run_script'] = local_run_script
         self.task_data['remote_run_script'] = self._remote_wdir() + '/run_script.sh'
 
+        if job_name:
+            self.task_data['job_name'] = job_name
+
         self.ssh_session.run_sftp(
             'create',
-            self._prepare_queue_script(queue_settings, modules, conda_env=conda_env),
+            self._prepare_queue_script(queue_settings, modules, conda_env=conda_env, set_debug=set_debug),
             self.task_data['remote_run_script']
         )
 
@@ -382,13 +480,16 @@ class Task():
         if poll_time:
             self.check_job(poll_time=poll_time)
 
-
     def _get_submitted_job_id(self):
         """ Reports job id after submission, developed in inherited classes """
         return ''
 
+# Job management
     def cancel(self, remove_data=False):
-        """ Cancels running task """
+        """ Cancels running task
+            Args:
+            * remove_data (**bool**): removes remote working directory
+        """
 
         if self.task_data['status'] in [SUBMITTED, RUNNING]:
             self._open_ssh_session()
@@ -458,6 +559,7 @@ class Task():
         """ Prints readable job status """
         print("{} Job {} is {}".format(prefix, self.task_data['remote_job_id'], JOB_STATUS[self.task_data['status']]))
 
+# Output data management
     def get_remote_file(self, file):
         """ Get file from remote working dir"""
         self._open_ssh_session()
@@ -472,15 +574,21 @@ class Task():
 
         return stdout, stderr
 
-
+    def get_remote_file_stats(self):
+        self._open_ssh_session()
+        stats = {}
+        for file in self.ssh_session.run_sftp('listdir', self._remote_wdir()):
+            stats[file] = vars(self.ssh_session.run_sftp('lstat',self._remote_wdir() + "/" + file))
+        return stats
+        
     def get_output_data(self, local_data_path='', files_only=None, overwrite=False):
-        """ Downloads remote working dir contents to local 
+        """ Downloads remote working dir contents to local
             Args:
                 * local_data_path (**str**): Path to local working dir
-                * files_only (**[str]**): Only download files in list, if empty download all files 
+                * files_only (**[str]**): Only download files in list, if empty download all files
                 * overwrite (**bool**): Overwarite local files id they exist
         """
-        
+
         self._open_ssh_session()
 
         if not self.task_data['remote_base_path']:
@@ -491,7 +599,7 @@ class Task():
                 local_data_path = self.task_data['output_data_path']
             elif 'local_data_path' in self.task_data:
                 local_data_path = self.task_data['local_data_path']
-                print("Warning: using input folder")
+                print("Warning: using original input folder")
             else:
                 sys.exit("ERROR: Local path for output not provided")
 
@@ -499,18 +607,18 @@ class Task():
             os.mkdir(local_data_path)
 
         remote_list_dir = self.ssh_session.run_sftp('listdir', self._remote_wdir())
-        
+
         if files_only:
             for file in files_only:
                 if file not in remote_list_dir:
-                    print("Warning: the file {} is not in the remote working dir".format(file))
-        
+                    print("Warning: file {} is not in the remote working dir".format(file))
+
         remote_file_list = []
         for file in remote_list_dir:
             if not files_only or file in files_only:
                 remote_file_list.append(file)
 
-        output_data_bundle = DataBundle(self.task_data['id'] + '_output')
+        output_data_bundle = DataBundle(self.task_data['id'] + '_output', remote=True)
 
         local_file_names = os.listdir(local_data_path)
 
@@ -518,17 +626,18 @@ class Task():
         for file in remote_file_list:
             if overwrite or (file not in local_file_names):
                 output_data_bundle.add_file(file)
+                output_data_bundle.file_stats[file] = vars(self.ssh_session.run_sftp('lstat', self._remote_wdir() + '/' + file))
 
         for file in output_data_bundle.files:
             local_file_path = local_data_path + '/' + file
             remote_file_path = self._remote_wdir() + '/' + file
             self.ssh_session.run_sftp('get', remote_file_path, local_file_path)
+            
             print("getting_file: {} -> {}".format(remote_file_path, local_file_path))
 
         self.task_data['output_data_bundle'] = output_data_bundle
         self.task_data['output_data_path'] = local_data_path
         self.modified = True
-
 
     def clean_remote(self):
         """ Remove data from remote host """

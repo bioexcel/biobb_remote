@@ -1,23 +1,31 @@
 {
+    "description": "CTE_Power(BSC)",
     "qsettings" :{
-        "openMP_64_1GPU_debug": {
+        "openMP_64_1GPU": {
             "ntasks": 1,
             "cpus-per-task" : 64,
             "ntasks-per-node" : 1,
             "nodes" : 1,
             "gres": "gpu:1",
-            "time" : "01:00:00",
-            "qos" : "debug"
+            "time" : "2-00:00:00"
         },
-        "default" : "openMP_64_1GPU_debug"
+        "debug": {
+            "qos":"debug",
+            "time": "02:00:00"
+        },
+        "default" : "openMP_64_1GPU"
     },
     "modules" :{
         "gromacs": ["gcc/6.4.0","openmpi/3.0.0", "cuda/10.2", "gromacs/2020.1"]
     },
     "cmd_settings":{
-        "use_gpu": "-nb gpu -pme gpu",
-        "dlb": "-dlb yes"
+        "gromacs_use_gpu": "-nb gpu -pme gpu",
+        "gromacs_dlb": "-dlb yes"
     },
+    "biobb_apps_path":"",
     "login_hosts" : ["plogin1.bsc.es", "plogin2.bsc.es"],
-    "cores_per_node" : 160
+    "cores_per_node" : 160,
+    "gpus_per_node": 4,
+    "min_cores_per_gpu" : 40,
+    "queues_command": ["module load bsc", "bsc_queues"]
 }

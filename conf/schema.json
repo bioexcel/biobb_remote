@@ -1,0 +1,125 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "http://bioexcel.eu/biobb_remote/conf/1.0/host_config",
+    "title": "Schema to specify remote host configuration files",
+    "type": "object",
+    "required" : [
+        "description", 
+        "login_hosts", 
+        "cores_per_node", 
+        "gpus_per_node"
+    ],
+    "properties": {
+        "description": {
+            "description": "Short title for the host",
+            "type": "string"
+        },
+        "login_hosts" : {
+            "type":"array",
+            "description": "Accepted login hosts",
+            "items": {"type":"string", "description": "FQDN host names for the login nodes"}
+        },
+        "cores_per_node" : {
+            "description": "Number of cores per node",
+            "type": "integer"
+        },
+        "gpus_per_node": {
+            "description": "Number of gpus per node, 0 if no GPUs available ",
+            "type": "integer"
+        },
+        "limit_nodes": {
+            "description": "Max number of nodes that can be allocated",
+            "type": "integer"
+        },
+        "min_cores_per_gpu" : {
+            "description": "Minimuyn number of cores per gpu",
+            "type": "integer"
+        },
+        "qsettings" :{
+            "description": "Pre-set queue settings",
+            "type": "object",
+            "required":["debug","default","serial"],
+            "debug": {
+                "type": "object",
+                "additionalProperties":{"type":"string"}
+            },
+            "default" : {
+                "description": "label used as default",
+                "type": "string"
+            },
+            "serial" : {
+                "type":"object",
+                "properties": {
+                    "ntasks": {
+                        "description": "Number of MPI tasks",
+                        "type":"integer",
+                        "maxvalue": 1
+                    },
+                    "cpus-per-task" : {
+                        "description": "Number of threads per MPI task",
+                        "type":"integer",
+                        "maxvalue": 1
+                    }
+                }
+            },
+            "additionalProperties": {
+                "type": "object",
+                "required": ["ntasks", "cpus-per_task","time"],
+                "properties": {
+                    "ntasks": {
+                        "description": "Number of MPI tasks",
+                        "type":"integer"
+                    },
+                    "cpus-per-task" : {
+                        "description": "Number of threads per MPI task",
+                        "type":"integer"
+                    },
+                    "ntasks-per-node" : {
+                        "description": "Number of MPI tasks per node",
+                        "type":"integer"
+                    },
+                    "nodes" : {
+                        "description": "Number of nodes to reserve, can be exclusive access depending on host",
+                        "type":"integer"
+                    },
+                    "gres": {
+                        "description": "Additional resurces, ex. GPUs",
+                        "type":"string"
+                    },
+                    "time" : {
+                        "description": "Limit Wall time d-hh:mm:ss",
+                        "type":"string"
+                    },
+                    "qos" : {
+                        "description": "QOS settings, ex debug",
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "modules" :{
+            "description": "Module bundles",
+            "additionalProperties": {
+                "type": "array",
+                "items": {"type":"string", "description": "module name"}
+            }
+        },
+        "cmd_settings":{
+            "description": "Predefined command line settings to be directly added",
+            "type": "object",
+            "additionalProperties": {
+                "type": "string",
+                "description": "Label and text"
+            }
+        },
+        "biobb_apps_path": {
+            "type": "string",
+            "description": "common prefix to biobb root directory on remote host"
+        },
+        "queues_command" : {
+            "description": "Command required to get queues information",
+            "type": "array",
+            "items" : {"type": "string"}
+        }
+    }
+}

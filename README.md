@@ -103,13 +103,13 @@ data_bundle = DataBundle(bundle_id)
 data_bundle.add_file(file_path)
 ~~~
 Adds a single file to the data bundle
-* file_path (**str**): Path to the file
+* file_path (**str**): Path to the file to add
 
 ~~~
 data_bundle.add_dir(dir_path)
 ~~~
 Adds all files from a directory
-* dir_path (**str**): Path to the directory
+* dir_path (**str**): Path to the directory to add
 
 ~~~
 ([str]) data_bundle.get_file_names()
@@ -122,7 +122,7 @@ Generates a list of names or included files
 Generates a Json dump
 
 **Task**
-Abstract module to handle remote tasks. Not for direct use, extended to include specific queueing systems
+Abstract module to handle remote tasks. Not for direct use, extend to include specific queueing systems
 
 ### Constants
 ~~~
@@ -142,7 +142,7 @@ task=Task(host=None, userid=None, look_for_keys=True)
  Classe to handle task execution 
 * host (**str**): Remote host
 * userid (**str**): Remote user id
-* look_for_keys (**bool**): Look for keys in user's .ssh directory
+* look_for_keys (**bool**): Look for keys available in user's .ssh directory
 
 ~~~
 (void) task.load_data_from_file(file_path, mode='json')
@@ -152,35 +152,53 @@ Loads accumulated task data from external file
 * mode (**str**): Format. Json | Pickle
 
 ~~~
+(void) task.save(save_file_path, mode='json')
+~~~
+Saves current task status in a external file. Can be used to recover session at a later time.
+* save_file_path (**str**): Path to file
+* mode (**str**): Format to use json|pickle.
+
+~~~
 (void) task.set_credentials(credentials):
 ~~~
 Loads ssh credentials from SSHCredentials object or from a external file
-credentials (**SSHCredentials** | **str**): SSHCredentials object or a path to a file containing the data
+* credentials (**SSHCredentials** | **str**): SSHCredentials object or a path to a file containing the data
 
 ~~~
 (void) task.load_host_config(host_config_path)
 ~~~
-Loads a pre-defined host configuration file 
+Loads a pre-defined host configuration file (json format)
+* host_config_path (**str**): Path to the configuration file
 
 ~~~
-(void) task.set_custom_settings(self, ref_setting='default', patch=None)
+(void) task.set_custom_settings(self, ref_setting='default', patch=None, clean=False)
 ~~~
 Generates a custom queue setting based on existing one
-* ref_setting (**str**): Base queue settings
-* patch (**dict**): Added or modified settings
+* ref_setting (**str**): Base settings to modify
+* patch (**dict**): Patch to apply
+* clean (**bool**): Clean existing settings 
 
 ~~~
-(void) task.set_local_data_bundle(local_data_path, add_files=True):
+(void) task.prep_auto_settings(total_cores=0, nodes=0, cpus_per_task=1,  num_gpus=0)
+~~~
+Generates queue configuration settings for balancing MPI/OMP/GPU.
+* total_cores (**int**): Aproximated number of cores to use
+* nodes (**int**): Number of complete nodes to use (overrides total_cores)
+* cpus_per_task (**int**): OMP processes per MPI task to allocate
+* num_gpus (**int**): Num of GPUs per node to allocate
+
+~~~
+(void) task.set_local_data_bundle(local_data_path, add_files=True)
 ~~~
 Builds local data bundle from a local directory
 * local_data_path (**str**): Path to local data directory
-* add_files (**bool**): On create add all files in the directory.
+* add_files (**bool**): On create, add all files in the directory.
 
 ~~~
 (void) task.send_input_data(remote_base_path, overwrite=True)
 ~~~
 Uploads data bundle files to remote working dir
-* remote_base_path (**str**): Remote base path for all task activites. Each task will create a unique working dir.
+* remote_base_path (**str**): Remote base path for all task activites. Each task will create a unique working dir (re-usable).
 * overwrite (**bool**): Upload files even if they already exists in the remote working dir. 
 
 ~~~
@@ -193,29 +211,33 @@ Generates 1 line python code to be executed in the queue script using python -c
 * properties (**dict** | **str**): Either a dict, path to a json or yaml config file or a 1-line Json with the required biobb parameters 
 
 ~~~
-(str) task.get_remote_comm_line(command, files, properties=''):
+(str) task.get_remote_comm_line(command, files, use_biobb=False, properties='', cmd_settings=''):
 ~~~
-Generates a command line for queue script using command line version of the biobb module 
-* files (**dict**): File names to associate to biobb required path parameters
-* command (**str**): biobb command (biobb_XX part of the path, base path provided by host configuration)
-* properties (**str**): file path (yaml | json) or 1-line Json with the required biobb parameters
+Generates a command line for queue script. Can be used to launch a biobb module or any command line remotely.
+* job_name (**str**): Job name to display (optional, used to identify queue jobs, and stdout/stderr logs)
+* command (**str**): Command to execute
+* files (**dict**): Input/output files. "--" prefix added if only a parameter name is provided
+* use_biobb (**bool**): Set to prepend biobb path on host
+* properties (**dict**): BioBB properties 
+* cmd_settings (**dict**): Additional settings to add to the command line, pre-set bundles can be configured in host config data.
 
 ~~~
-(void) task.submit(queue_settings, modules, local_run_script, conda_env='', poll_time=0)
+(void) task.submit(job_name=None, queue_settings='default', modules=None, local_run_script='', conda_env='', poll_time=0)
 ~~~
-Submits task 
-* queue_settings (**str**): Label for set of queue controls (defined in host configuration)
+Submits task to remote. Optionally waits until completion.
+* job_name (**str**): Job name to display in the queuing system. Stdout/stderr logs are named as job.name.(out|err). Optional, defaults to queue default behaviour.
+* queue_settings (**str**): Label for set of queue settings (defined in host configuration). Use 'custom' for user defined settings (see set_custom_settings)
 * modules (**str**): modules to activate (defined in host configuration)
 * conda_env (**str**): Conda environment to activate 
 * local_run_script (**str**): Path to local script to run or a string with the script itself (identified by leading '#' tag)
-* poll_time (**int**): if set polls periodically for job completion (seconds)
+* poll_time (**int**): if set, polls periodically for job completion (seconds)
 
 ~~~
 (void) task.cancel(remove_data=False)
 ~~~
 Cancels running task
-* remove_data (**bool**): removes remote working directory
-
+* remove_data (**bool**): Removes remoted workign directory.
+ 
 ~~~
 (str) task.check_queue()
 ~~~
@@ -240,18 +262,12 @@ Gets file from remote working dir
 Get queue logs
 
 ~~~
-(void) task.get_output_data(local_data_path='', overwrite=False)
+(void) task.get_output_data(local_data_path='', files_only=None, overwrite=False)
 ~~~
 Downloads remote working dir contents to local path
 * local_data_path (**str**): Path to local directory 
+* files_only (**[str]**): Only download files in list, if empty download all files 
 * overwrite (**bool**): Overwrite local files if they exist
-
-~~~
-(void) task.save(save_file_path, mode='json')
-~~~
-Saves current task status in a external file. Can be used to recover session at a later time.
-* save_file_path (**str**): Path to file
-* mode (**str**): Format to use json|pickle.
 
 ~~~
 (void) task.clean_remote()
@@ -260,6 +276,9 @@ Remove remote working dir
 
 ## slurm.py
 Task Class extended to include specific settings for Slurm queueing system
+
+## conf/XXX.json
+Host configuration files
 
 ### Utilities
 ## credentials
@@ -297,7 +316,7 @@ slurm_test [-h] --keys_path KEYS_PATH [--script SCRIPT_PATH]
 ~~~
 
 ### Version
-v0.2.0 August 2020
+v1.0.0 December 2020
 
 ### Copyright & Licensing
 This software has been developed in the MMB group (http://mmb.irbbarcelona.org) at the

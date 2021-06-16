@@ -1,4 +1,4 @@
-#! /usr/bin/python3
+#!/usr/bin/env python
 """ Command line utility for remote ssh command in biobb_remote"""
 __author__ = "gelpi"
 __date__ = "$08-March-2019 17:32:38$"
