@@ -48,7 +48,7 @@ class DataBundle():
         if file_path not in self.files:
             self.files.append(file_path)
         if not self.remote:
-            self.file_stats[file_path] = os.stat(file_path)
+            self.file_stats[os.path.basename(file_path)] = os.stat(file_path)
 
     def add_dir(self, dir_path):
         """ Adds all files from a directory
@@ -56,17 +56,19 @@ class DataBundle():
                 * dir_path (**str**): Path to the directory
         """
         try:
-            self.files = list(map(lambda x: dir_path+'/'+x, os.listdir(dir_path)))
+            self.files = list(
+                map(lambda x: dir_path+'/'+x, os.listdir(dir_path)))
         except IOError as err:
             sys.exit(err)
 
     def get_file_names(self):
         """ Generates a list of names of included files"""
         return [os.path.basename(x) for x in self.files]
-    
+
     def to_json(self):
         """ Generates a Json dump"""
         return json.dumps(self.__dict__)
+
 
 class Task():
     """ Classe to handle task execution
@@ -75,11 +77,13 @@ class Task():
             * userid (**str**): remote user id
             * look_for_keys (**bool**): Look for keys in user's .ssh directory
     """
+
     def __init__(self, host=None, userid=None, look_for_keys=True):
         self.id = str(uuid.uuid4())
         #self.description = description
-        self.ssh_data = SSHCredentials(host=host, userid=userid, look_for_keys=look_for_keys)
-        self.task_data = {'id':self.id, 'modules':[]}
+        self.ssh_data = SSHCredentials(
+            host=host, userid=userid, look_for_keys=look_for_keys)
+        self.task_data = {'id': self.id, 'modules': []}
         self.ssh_session = None
         self.host_config = None
         self.commands = {}
@@ -91,20 +95,24 @@ class Task():
                 * file_path (**str**): Path to file
                 * mode (**str**): Format. Json | Pickle
         """
-        #TODO detect file type
+        # TODO detect file type
         if mode == 'pickle':
             file = open(file_path, 'rb')
             self.task_data = pickle.load(file)
         elif mode == 'json':
             file = open(file_path, 'r')
             self.task_data = json.load(file)
-            if 'local_data_bundle'  in self.task_data:
-                local_data_bundle = json.loads(self.task_data['local_data_bundle'])
-                self.task_data['local_data_bundle'] = DataBundle(local_data_bundle['id'])
+            if 'local_data_bundle' in self.task_data:
+                local_data_bundle = json.loads(
+                    self.task_data['local_data_bundle'])
+                self.task_data['local_data_bundle'] = DataBundle(
+                    local_data_bundle['id'])
                 self.task_data['local_data_bundle'].files = local_data_bundle['files']
-            if 'output_data_bundle'  in self.task_data:
-                output_data_bundle = json.loads(self.task_data['output_data_bundle'])
-                self.task_data['output_data_bundle'] = DataBundle(output_data_bundle['id'])
+            if 'output_data_bundle' in self.task_data:
+                output_data_bundle = json.loads(
+                    self.task_data['output_data_bundle'])
+                self.task_data['output_data_bundle'] = DataBundle(
+                    output_data_bundle['id'])
                 self.task_data['output_data_bundle'].files = local_data_bundle['files']
         else:
             sys.exit("ERROR: file type ({}) not supported".format(mode))
@@ -122,9 +130,9 @@ class Task():
                 data = {'id': self.id}
                 for k in self.task_data:
                     data[k] = self.task_data[k]
-                if 'local_data_bundle'  in self.task_data:
+                if 'local_data_bundle' in self.task_data:
                     data['local_data_bundle'] = self.task_data['local_data_bundle'].to_json()
-                if 'output_data_bundle'  in self.task_data:
+                if 'output_data_bundle' in self.task_data:
                     data['output_data_bundle'] = self.task_data['output_data_bundle'].to_json()
                 with open(save_file_path, 'w') as task_file:
                     json.dump(data, task_file, indent=3)
@@ -163,9 +171,11 @@ class Task():
     def get_queue_info(self):
         if 'queues_command' in self.host_config and self.host_config['queues_command']:
             self._open_ssh_session()
-            data = self.ssh_session.run_command(";".join(self.host_config['queues_command']))
+            data = self.ssh_session.run_command(
+                ";".join(self.host_config['queues_command']))
         else:
-            print("Warning: command not available on " + self.host_config['description'])
+            print("Warning: command not available on " +
+                  self.host_config['description'])
             data = ''
         return data[0]
 
@@ -198,7 +208,7 @@ class Task():
                 ref_settings = self.host_config['qsettings'][self.host_config['qsettings']['default']]
             else:
                 ref_settings = self.host_config['qsettings'][setting_id]
-            for k,v in ref_settings.items():
+            for k, v in ref_settings.items():
                 self.task_data['queue_settings'][k] = v
         if 'job_name' in self.task_data and self.task_data['job_name']:
             self.task_data['queue_settings']['job'] = self.task_data['job_name']
@@ -217,7 +227,7 @@ class Task():
             self.task_data['biobb_apps_path'] = '.'
 
         if set_debug:
-            for k,v in self.host_config['qsettings']['debug'].items():
+            for k, v in self.host_config['qsettings']['debug'].items():
                 self.task_data['queue_settings'][k] = v
 
     def set_custom_settings(self, ref_setting='default', patch=None, clean=False):
@@ -255,15 +265,18 @@ class Task():
         if num_gpus:
             if self.host_config['gpus_per_node']:
                 if cpus_per_task < self.host_config['min_cores_per_gpu']:
-                    print("Warning: min cores per gpu is", self.host_config['min_cores_per_gpu'])
+                    print("Warning: min cores per gpu is",
+                          self.host_config['min_cores_per_gpu'])
                     cpus_per_task = self.host_config['min_cores_per_gpu']
             else:
-                print("Warning: GPU not available at " + self.host_config['description'])
+                print("Warning: GPU not available at " +
+                      self.host_config['description'])
                 num_gpus = 0
 
         cpus_per_task = min(cpus_per_task, total_cores)
         ntasks = int(total_cores / cpus_per_task)
-        ntasks_per_node = int(min(total_cores /cpus_per_task, self.host_config['cores_per_node'] / cpus_per_task))
+        ntasks_per_node = int(min(total_cores / cpus_per_task,
+                                  self.host_config['cores_per_node'] / cpus_per_task))
         nodes = int(max(1, total_cores / self.host_config['cores_per_node']))
 
         if num_gpus:
@@ -276,16 +289,17 @@ class Task():
             ntasks = ntasks_per_node * nodes
 
         settings = {
-            'ntasks' : ntasks,
+            'ntasks': ntasks,
             'cpus-per-task': cpus_per_task,
             'ntasks-per-node': ntasks_per_node,
-            'nodes' : nodes
+            'nodes': nodes
         }
         if num_gpus:
             settings['gres'] = 'gpu:' + str(num_gpus)
-        #For Gromacs
+        # For Gromacs
         if ntasks > 1 and cpus_per_task > 6:
-            print("Warning: requesting more OMP tasks than recommended, use -ntomp to force")
+            print(
+                "Warning: requesting more OMP tasks than recommended, use -ntomp to force")
 
         return settings
 
@@ -302,28 +316,37 @@ class Task():
             self.task_data['local_data_bundle'].add_dir(local_data_path)
         self.modified = True
 
-    def send_input_data(self, remote_base_path, overwrite=True):
+    def send_input_data(self, remote_base_path, overwrite=True, new_only=True):
         """ Uploads data to remote working dir
             Args:
                 * remote_base_path (**str**): Path to remote base directory, task folders created within
                 * overwrite (**bool**): Overwrite files with the same name if any
+                * new_only (**bool**): Overwrite only newer files
         """
 
         self._open_ssh_session()
 
         self.task_data['remote_base_path'] = remote_base_path
-        stdout, stderr = self.ssh_session.run_command('mkdir -p ' + self._remote_wdir())
+        stdout, stderr = self.ssh_session.run_command(
+            'mkdir -p ' + self._remote_wdir())
         if stderr:
             sys.exit('Error while creating remote working directory: ' + stderr)
 
         if not self.task_data['local_data_bundle']:
             sys.exit("Error: Create input data bundle first")
 
-        remote_files = self.ssh_session.run_sftp('listdir', self._remote_wdir())
-        ##TODO overwrite based on file timestamp
+        #remote_files = self.ssh_session.run_sftp('listdir', self._remote_wdir())
+        remote_stats = self.get_remote_file_stats()
+
         for file_path in self.task_data['local_data_bundle'].files:
-            remote_file_path = self._remote_wdir() + '/' + os.path.basename(file_path)
-            if overwrite or os.path.basename(file_path) not in remote_files:
+            file_name = os.path.basename(file_path)
+            exists = file_name in remote_stats
+            if exists:
+                is_new = self.task_data['local_data_bundle'].file_stats[file_name].st_mtime > remote_stats[file_name]['st_mtime']
+            else:
+                is_new = False
+            if not exists or (overwrite and (not new_only or is_new)):
+                remote_file_path = self._remote_wdir() + '/' + file_name
                 self.ssh_session.run_sftp('put', file_path, remote_file_path)
                 print("sending_file: {} -> {}".format(file_path, remote_file_path))
         self.task_data['input_data_loaded'] = True
@@ -345,7 +368,7 @@ class Task():
         file_params = []
         for file in files.keys():
             if files[file]:
-                file_params.append("{}='{}'".format(file,files[file]))
+                file_params.append("{}='{}'".format(file, files[file]))
         files_str = ','.join(file_params)
 
         if properties:
@@ -354,7 +377,8 @@ class Task():
                 prop = json.dumps(properties)
             else:
                 prop = properties
-            prop_str = "properties=" + BIOBB_COMMON_SETTINGS_CALL.format(prop.replace('"', '\\"'))
+            prop_str = "properties=" + \
+                BIOBB_COMMON_SETTINGS_CALL.format(prop.replace('"', '\\"'))
         else:
             prop_str = "properties=None"
 
@@ -386,10 +410,10 @@ class Task():
                 cmd.append(" " + files[file])
 
         if properties:
-            cmd_settings['-c']= "'" + json.dumps(properties) + "'"
+            cmd_settings['-c'] = "'" + json.dumps(properties) + "'"
 
         if cmd_settings:
-            for k,v in cmd_settings.items():
+            for k, v in cmd_settings.items():
                 if 'cmd_settings' in self.host_config and k in self.host_config['cmd_settings']:
                     cmd += [self.host_config['cmd_settings'][k]]
                 else:
@@ -409,7 +433,7 @@ class Task():
             self.task_data['conda_env'] = conda_env
         self.modified = True
 
-        #Build bash script
+        # Build bash script
 
         scr_lines = ["#!/bin/bash"]
         scr_lines += self._get_queue_settings_string_array()
@@ -424,7 +448,8 @@ class Task():
             with open(self.task_data['local_run_script'], 'r') as scr_file:
                 script = '\n'.join(scr_lines) + '\n' + scr_file.read()
         else:
-            script = '\n'.join(scr_lines) + '\n' + self.task_data['local_run_script']
+            script = '\n'.join(scr_lines) + '\n' + \
+                self.task_data['local_run_script']
 
         return script
 
@@ -446,19 +471,22 @@ class Task():
                 * poll_time (**int**): if set polls periodically for job completion (seconds)        """
         # Checking that configuration is a valid one
         if self.ssh_data.host not in self.host_config['login_hosts']:
-            sys.exit("Error. Configuration available does not apply to", self.ssh_data.host)
+            sys.exit("Error. Configuration available does not apply to",
+                     self.ssh_data.host)
 
         self._open_ssh_session()
 
         self.task_data['local_run_script'] = local_run_script
-        self.task_data['remote_run_script'] = self._remote_wdir() + '/run_script.sh'
+        self.task_data['remote_run_script'] = self._remote_wdir() + \
+            '/run_script.sh'
 
         if job_name:
             self.task_data['job_name'] = job_name
 
         self.ssh_session.run_sftp(
             'create',
-            self._prepare_queue_script(queue_settings, modules, conda_env=conda_env, set_debug=set_debug),
+            self._prepare_queue_script(
+                queue_settings, modules, conda_env=conda_env, set_debug=set_debug),
             self.task_data['remote_run_script']
         )
 
@@ -518,8 +546,8 @@ class Task():
         old_status = self.task_data['status']
         if self.task_data['status'] is not CANCELLED:
             stdout, stderr = self.ssh_session.run_command(
-                self.commands['queue'] \
-                + ' -h --job ' \
+                self.commands['queue']
+                + ' -h --job '
                 + self.task_data['remote_job_id']
             )
             if not stdout:
@@ -557,20 +585,23 @@ class Task():
 
     def _print_job_status(self, prefix=''):
         """ Prints readable job status """
-        print("{} Job {} is {}".format(prefix, self.task_data['remote_job_id'], JOB_STATUS[self.task_data['status']]))
+        print("{} Job {} is {}".format(
+            prefix, self.task_data['remote_job_id'], JOB_STATUS[self.task_data['status']]))
 
 # Output data management
     def get_remote_file(self, file):
         """ Get file from remote working dir"""
         self._open_ssh_session()
-        #TODO check remote file exists
+        # TODO check remote file exists
         return self.ssh_session.run_sftp('file', self._remote_wdir() + "/" + file)
 
     def get_logs(self):
         """ Get specific queue logs"""
         self.check_job()
-        stdout = self.get_remote_file(self.task_data['queue_settings']['stdout'])
-        stderr = self.get_remote_file(self.task_data['queue_settings']['stderr'])
+        stdout = self.get_remote_file(
+            self.task_data['queue_settings']['stdout'])
+        stderr = self.get_remote_file(
+            self.task_data['queue_settings']['stderr'])
 
         return stdout, stderr
 
@@ -578,15 +609,18 @@ class Task():
         self._open_ssh_session()
         stats = {}
         for file in self.ssh_session.run_sftp('listdir', self._remote_wdir()):
-            stats[file] = vars(self.ssh_session.run_sftp('lstat',self._remote_wdir() + "/" + file))
+            stats[file] = vars(self.ssh_session.run_sftp(
+                'lstat', self._remote_wdir() + "/" + file))
         return stats
-        
-    def get_output_data(self, local_data_path='', files_only=None, overwrite=False):
+
+    def get_output_data(self, local_data_path='', files_only=None, overwrite=True, new_only=True, verbose=False):
         """ Downloads remote working dir contents to local
             Args:
                 * local_data_path (**str**): Path to local working dir
                 * files_only (**[str]**): Only download files in list, if empty download all files
-                * overwrite (**bool**): Overwarite local files id they exist
+                * overwrite (**bool**): Overwrite local files id they exist
+                * new_only (**bool**): Overwrite only newer files
+                * verbose (**bool**): Show file status
         """
 
         self._open_ssh_session()
@@ -599,40 +633,47 @@ class Task():
                 local_data_path = self.task_data['output_data_path']
             elif 'local_data_path' in self.task_data:
                 local_data_path = self.task_data['local_data_path']
-                print("Warning: using original input folder")
+                print("Warning: re-using original input folder")
             else:
                 sys.exit("ERROR: Local path for output not provided")
 
         if not os.path.exists(local_data_path):
             os.mkdir(local_data_path)
 
-        remote_list_dir = self.ssh_session.run_sftp('listdir', self._remote_wdir())
-
+        #remote_list_dir = self.ssh_session.run_sftp('listdir', self._remote_wdir())
+        remote_stats = self.get_remote_file_stats()
         if files_only:
             for file in files_only:
-                if file not in remote_list_dir:
-                    print("Warning: file {} is not in the remote working dir".format(file))
+                if file not in remote_stats:
+                    print(
+                        "Warning: file {} is not in the remote working dir".format(file))
 
         remote_file_list = []
-        for file in remote_list_dir:
+        for file in remote_stats:
             if not files_only or file in files_only:
                 remote_file_list.append(file)
 
-        output_data_bundle = DataBundle(self.task_data['id'] + '_output', remote=True)
+        output_data_bundle = DataBundle(
+            self.task_data['id'] + '_output', remote=True)
 
         local_file_names = os.listdir(local_data_path)
 
-        # TODO check for file time stamps
         for file in remote_file_list:
-            if overwrite or (file not in local_file_names):
+            if file in local_file_names:
+                is_new = remote_stats[file]['st_mtime'] > os.stat(local_data_path + '/' + file).st_mtime
+            else:
+                is_new = False
+            if verbose:
+                print('{:20s} Exists: {}, New: {}'.format(file, file in local_file_names, is_new))
+            if (file not in local_file_names) or (overwrite and (not new_only or is_new)):
                 output_data_bundle.add_file(file)
-                output_data_bundle.file_stats[file] = vars(self.ssh_session.run_sftp('lstat', self._remote_wdir() + '/' + file))
+                output_data_bundle.file_stats[file] = remote_stats[file]
 
         for file in output_data_bundle.files:
             local_file_path = local_data_path + '/' + file
             remote_file_path = self._remote_wdir() + '/' + file
             self.ssh_session.run_sftp('get', remote_file_path, local_file_path)
-            
+
             print("getting_file: {} -> {}".format(remote_file_path, local_file_path))
 
         self.task_data['output_data_bundle'] = output_data_bundle
@@ -642,7 +683,8 @@ class Task():
     def clean_remote(self):
         """ Remove data from remote host """
         self._open_ssh_session()
-        print("Removing remote data for job {}".format(self.task_data['remote_job_id']))
+        print("Removing remote data for job {}".format(
+            self.task_data['remote_job_id']))
         self.ssh_session.run_command('rm -rf ' + self._remote_wdir())
         if 'output_data_path' in self.task_data:
             del self.task_data['output_data_path']
