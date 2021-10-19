@@ -92,4 +92,8 @@ class SSHSession():
         except IOError as err:
             sys.exit(err)
         return False
+    
+    def is_active(self):
+        ''' Test whether the defined session is active'''
+        return self.ssh and self.ssh.get_transport().is_active()
 

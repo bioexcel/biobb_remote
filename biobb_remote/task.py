@@ -654,7 +654,7 @@ class Task():
         return self.task_data['remote_base_path'] + '/biobb_' + self.id
 
     def _open_ssh_session(self):
-        if self.ssh_session:
+        if self.ssh_session and self.ssh_session.is_active():
             return False
         if not self.ssh_data:
             sys.exit("No credentials available")
