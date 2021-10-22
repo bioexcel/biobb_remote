@@ -36,8 +36,7 @@ class DataBundle():
 
     def __init__(self, bundle_id, remote=False):
         self.id = bundle_id
-        self.files = []
-        self.file_stats = {}
+        self.files = {}
         self.remote = remote
 
     def add_file(self, file_path):
@@ -46,9 +45,10 @@ class DataBundle():
                 * file_path (**str**): Path to the file
         """
         if file_path not in self.files:
-            self.files.append(file_path)
+            file_name = os.path.basename(file_path) 
+            self.files[file_name] = {"full_path": file_path, 'stats': None}
         if not self.remote:
-            self.file_stats[os.path.basename(file_path)] = os.stat(file_path)
+            self.files[file_name]['stats'] = os.stat(file_path)
 
     def add_dir(self, dir_path):
         """ Adds all files from a directory
@@ -63,7 +63,15 @@ class DataBundle():
 
     def get_file_names(self):
         """ Generates a list of names of included files"""
-        return [os.path.basename(x) for x in self.files]
+        return self.files.keys()
+
+    def get_full_path(self, file_name):
+        """ Gives the full path for agiven file"""
+        return self.files[file_name]['file_path']
+
+    def get_mtime(self, file_name):
+        """ Gives the modification time for a given residue"""
+        return self.files[file_name]['stats'].st_mtime
 
     def to_json(self):
         """ Generates a Json dump"""
@@ -338,17 +346,17 @@ class Task():
         #remote_files = self.ssh_session.run_sftp('listdir', self._remote_wdir())
         remote_stats = self.get_remote_file_stats()
 
-        for file_path in self.task_data['local_data_bundle'].files:
-            file_name = os.path.basename(file_path)
+        for file_name in self.task_data['local_data_bundle'].files:            
+            file = self.task_data['local_data_bundle'].files[file_name]
             exists = file_name in remote_stats
             if exists:
-                is_new = self.task_data['local_data_bundle'].file_stats[file_name].st_mtime > remote_stats[file_name]['st_mtime']
+                is_new = file['stats'].st_mtime > remote_stats[file_name]['st_mtime']
             else:
-                is_new = False
+                is_new = True
             if not exists or (overwrite and (not new_only or is_new)):
                 remote_file_path = self._remote_wdir() + '/' + file_name
-                self.ssh_session.run_sftp('put', file_path, remote_file_path)
-                print("sending_file: {} -> {}".format(file_path, remote_file_path))
+                self.ssh_session.run_sftp('put', file['full_path'], remote_file_path)
+                print("sending_file: {} -> {}".format(file['full_path'], remote_file_path))
         self.task_data['input_data_loaded'] = True
         self.modified = True
 
@@ -662,12 +670,12 @@ class Task():
             if file in local_file_names:
                 is_new = remote_stats[file]['st_mtime'] > os.stat(local_data_path + '/' + file).st_mtime
             else:
-                is_new = False
+                is_new = True
             if verbose:
                 print('{:20s} Exists: {}, New: {}'.format(file, file in local_file_names, is_new))
             if (file not in local_file_names) or (overwrite and (not new_only or is_new)):
                 output_data_bundle.add_file(file)
-                output_data_bundle.file_stats[file] = remote_stats[file]
+                output_data_bundle.files[file]['stats'] = remote_stats[file]
 
         for file in output_data_bundle.files:
             local_file_path = local_data_path + '/' + file
