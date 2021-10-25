@@ -164,6 +164,17 @@ class Task():
         else:
             self.ssh_data.load_from_file(credentials)
 
+    def set_private_key(self, private_path, passwd=None):
+        """ Inserts private key from external file
+        Args:
+            private_path (**str**): Path to private key file
+            passwd (**str**, optional): Password to decrypt private key
+        """
+        if not self.ssh_data:
+            print("Create credentials first")
+        else:
+            self.ssh_data.load_from_private_key_file(passwd)
+            
 # Host config management
     def load_host_config(self, host_config_path):
         """ Loads a pre-defined host configuration file
