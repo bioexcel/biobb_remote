@@ -26,7 +26,7 @@ class SSHSession():
             if credentials_path:
                 self.ssh_data.load_from_file(credentials_path, passwd)
             elif private_path:
-                self.ssh_data.load_form_private_key_file(private_path, passwd)
+                self.ssh_data.load_from_private_key_file(private_path, passwd)
         else:
             self.ssh_data = ssh_data
         
