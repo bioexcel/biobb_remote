@@ -15,16 +15,21 @@ class SSHSession():
         Args:
             * ssh_data (**SSHCredentials**): SSHCredentials object
             * credentials_path (**str**): Path to packed credentials file to use
+            * private_path (**str**): Path to private key file
+            * passwd (**str**): Password to decrypt credentials
             * debug (**bool**): Prints verbose debug information on connection
     """
     
-    def __init__(self, ssh_data=None, credentials_path=None, debug=False):
+    def __init__(self, ssh_data=None, credentials_path=None, private_path=None, passwd=None, debug=False):
         if ssh_data is None:
             self.ssh_data = SSHCredentials(credentials_path is None)
             if credentials_path:
-                self.ssh_data.load_from_file(credentials_path)
+                self.ssh_data.load_from_file(credentials_path, passwd)
+            elif private_path:
+                self.ssh_data.load_form_private_key_file(private_path, passwd)
         else:
             self.ssh_data = ssh_data
+        
         self.ssh = SSHClient()
         self.ssh.set_missing_host_key_policy(AutoAddPolicy())
        
