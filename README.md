@@ -16,18 +16,27 @@ credentials = SSHCredentials(host='', userid='', generate_key=False, look_for_ke
 
 ### Methods
 ~~~
-(void) credentials.save(output_path, public_key_path=None, private_key_path=None)
+(void) credentials.save(output_path, public_key_path=None, private_key_path=None, passwd=None)
 ~~~
 Stores SSHCredentials object in a external file
 * output_path (**str**): Path to file  
 * public_key_path (**str**): Path to a standard public key file
 * private_key_path (**str**): Path to a standard private key file
+* passwd (**str**): Password to encrypt private key (optional)
 
 ~~~
-(void) credentials.load_from_file(credentials_path) 
+(void) credentials.load_from_file(credentials_path, passwd=None) 
 ~~~
 Recovers SSHCredentials object from disk file
 * credentials_path (**str**): Path to packed credentials file. 
+* passwd (**str**): Passwd to decrypt private key (optional)
+
+~~~
+(void) credentials.load_from_private_key_file(private_path, passwd=None) 
+~~~
+Recovers SSHCredentials object from disk file
+* private_path (**str**): Path to private key file. 
+* passwd (**str**): Passwd to decrypt private key (optional)
 
 ~~~
 (void) credentials.generate_key(nbits=2048)
@@ -42,9 +51,10 @@ Returns a readable publik key suitable to addto authorized keys
 * suffix (**str**): Added to the key for identify it.
 
 ~~~
-(str) credentials.get_private_key()
+(str) credentials.get_private_key(passwd=None)
 ~~~
-Returns a readable private key
+Returns a readable possibly encrypted private key
+* passwd (**str**): Password to encrypt private key (optional)
 
 ~~~
 (bool) credentials.check_host_auth()
@@ -67,11 +77,12 @@ Removes public_key on remote .ssh/authorized_keys file. Requires users' SSH acce
 ## ssh_session.py
 Class wrapping ssh operations
 ~~~
-ssh_session = SSHSession(ssh_data=None, credentials_path=None)
+ssh_session = SSHSession(ssh_data=None, credentials_path=None, private_path=None, passwd=None)
 ~~~
 * ssh_data (**SSHCredentials**) : SSHCredentials object
 * credentials_path (**str**) : Path to packed credentials file to use
-
+* private_path (**str**): Path to private key file
+* passwd (**str**): Password to decrypt credentials (optional)
 ~~~
 (str) ssh_session.run_command(command)
 ~~~
@@ -159,10 +170,11 @@ Saves current task status in a external file. Can be used to recover session at 
 * mode (**str**): Format to use json|pickle.
 
 ~~~
-(void) task.set_credentials(credentials):
+(void) task.set_credentials(credentials, passwd=None):
 ~~~
 Loads ssh credentials from SSHCredentials object or from a external file
 * credentials (**SSHCredentials** | **str**): SSHCredentials object or a path to a file containing the data
+* passwd (**str**): Password to decrypt private key when loaded from file (optional)
 
 ~~~
 (void) task.load_host_config(host_config_path)
