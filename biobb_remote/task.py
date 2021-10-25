@@ -110,7 +110,7 @@ class Task():
             sys.exit("ERROR: file type ({}) not supported".format(mode))
         self.id = self.task_data['id']
 
-    def save(self, save_file_path, mode='json'):
+    def save(self, save_file_path, mode='json', verbose=False):
         """ Saves current task status in a external file. Can be used to recover session at a later time.
             Args:
                 * save_file_path (**str**): Path to file
@@ -135,6 +135,8 @@ class Task():
             else:
                 sys.exit("ERROR: Mode ({}) not supported")
         self.modified = False
+        if verbose:
+            print("Task log saved on ", save_file_path)
 
 # Credential management
     def set_credentials(self, credentials):
@@ -445,7 +447,7 @@ class Task():
         """
         return []
 
-    def submit(self, job_name=None, set_debug=False, queue_settings='default', modules=None, local_run_script='', conda_env='', poll_time=0):
+    def submit(self, job_name=None, set_debug=False, queue_settings='default', modules=None, local_run_script='', conda_env='', save_file_path=None, poll_time=0):
         """ Submits task
             Args:
                 * job_name (**str**): Job name to display (optional, used to identify queue jobs, and stdout/stderr logs)
@@ -454,6 +456,7 @@ class Task():
                 * modules (**str**): modules to activate (defined in host configuration)
                 * conda_env (**str**): Conda environment to activate
                 * local_run_script (**str**): Path to local script to run or a string with the script itself (identified by leading '#' tag)
+                * save_file_path (**str**); Path to save task log
                 * poll_time (**int**): if set polls periodically for job completion (seconds)        """
         # Checking that configuration is a valid one
         if self.ssh_data.host not in self.host_config['login_hosts']:
@@ -487,7 +490,10 @@ class Task():
         self.modified = True
 
         print('Submitted job {}'.format(self.task_data['remote_job_id']))
-
+        
+        if save_file_path:
+            self.save(save_file_path)
+        
         if poll_time:
             self.check_job(poll_time=poll_time)
 
