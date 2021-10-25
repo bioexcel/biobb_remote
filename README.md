@@ -177,6 +177,13 @@ Loads ssh credentials from SSHCredentials object or from a external file
 * passwd (**str**): Password to decrypt private key when loaded from file (optional)
 
 ~~~
+(void) task.set_private_key(private_path, passwd=None):
+~~~
+Inserts private key from external file
+* private_path (**str**): Path to private key file
+* passwd (**str**, optional): Password to decrypt private key
+  
+~~~
 (void) task.load_host_config(host_config_path)
 ~~~
 Loads a pre-defined host configuration file (json format)
