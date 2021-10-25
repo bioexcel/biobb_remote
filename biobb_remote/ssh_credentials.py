@@ -30,9 +30,10 @@ class SSHCredentials():
         if generate_key:
             self.generate_key()
 
-    def load_from_file(self, credentials_path):
+    def load_from_file(self, credentials_path, passwd=None):
         """ Recovers SSHCredentials object from disk file
             * credentials_path (**str**): Path to packed credentials file.
+            * passwd (**str**): Use to decrypt private key
         """
         try:
             file = open(credentials_path, 'rb')
@@ -42,8 +43,18 @@ class SSHCredentials():
         self.host = data['host']
         self.userid = data['userid']
         self.look_for_keys = data['look_for_keys']
-        self.key = RSAKey.from_private_key(StringIO(data['data'].getvalue()))
+        self.key = RSAKey.from_private_key(StringIO(data['data'].getvalue()), passwd)
 
+    def load_from_private_key_file(self, private_path, passwd=None):
+        """ Loads private key from standard file
+            * private_path(**str**): Path to private key file
+            * passwd(**str**): Password to decrypt private key (optional)
+        """
+        try:
+            self.key = RSAKey.from_private_key_file(private_path, passwd)
+        except IOError as err:
+            sys.exit(err)
+        
     def generate_key(self, nbits=2048):
         """ Generates RSA keys pair
             * nbits (**int**): number of bits the generated key
@@ -54,17 +65,25 @@ class SSHCredentials():
         """ Returns a readable public key suitable to add to authorized keys
             * suffix (**str**): Added to the key for identify it.
         """
-        return '{} {} {}{}\n'.format(
-            self.key.get_name(), self.key.get_base64(), self.userid, suffix
-        )
+        if self.key:
+            return '{} {} {}{}\n'.format(
+                self.key.get_name(), self.key.get_base64(), self.userid, suffix
+            )
+        else:
+            return None
 
-    def get_private_key(self):
-        """ Return a readable private key"""
-        private = StringIO()
-        self.key.write_private_key(private)
-        return private.getvalue()
+    def get_private_key(self, passwd=None):
+        """ Return a readable private key
+            * passwd (**str**): Use passwd to encrypt key
+        """
+        if self.key:
+            private = StringIO()
+            self.key.write_private_key(private, passwd)
+            return private.getvalue()
+        else:
+            return None
 
-    def save(self, output_path, public_key_path=None, private_key_path=None):
+    def save(self, output_path, public_key_path=None, private_key_path=None, passwd=None):
         """ Save packed credentials on external file for re-usage
             * output_path (**str**): Path to file  
             * public_key_path (**str**): Path to a standard public key file
@@ -72,7 +91,8 @@ class SSHCredentials():
         """
         with open(output_path, 'wb') as keys_file:
             private = StringIO()
-            self.key.write_private_key(private)
+            if self.key:
+                self.key.write_private_key(private)
             pickle.dump(
                 {
                     'userid': self.userid,
@@ -85,7 +105,7 @@ class SSHCredentials():
                 pubkey_file.write(self.get_public_key())
         if private_key_path:
             with open(private_key_path, 'w') as privkey_file:
-                privkey_file.write(self.get_private_key())
+                privkey_file.write(self.get_private_key(passwd))
             os.chmod(private_key_path, stat.S_IREAD + stat.S_IWRITE)
 
     def check_host_auth(self):
