@@ -135,6 +135,7 @@ class Task():
             Args:
                 * save_file_path (**str**): Path to file
                 * mode (**str**): Format to use json|pickle.
+                * verbose (**bool**): Print additional information
         """
         if self.modified:
             self.task_data['id'] = self.id
@@ -348,7 +349,7 @@ class Task():
             Args:
                 * remote_base_path (**str**): Path to remote base directory, task folders created within
                 * overwrite (**bool**): Overwrite files with the same name if any
-                * new_only (**bool**): Overwrite only newer files
+                * new_only (**bool**): Overwrite only with newer files
         """
 
         self._open_ssh_session()
@@ -595,13 +596,16 @@ class Task():
             self.modified = old_status != self.task_data['status']
         return self.task_data['status']
 
-    def check_job(self, update=True, poll_time=0):
+    def check_job(self, update=True, save_file_path=None,  poll_time=0):
         """ Prints job status
                 * update: update status before printing it
                 * poll_time (Seconds): poll until job finished
+                * save_file_path (**str**): Local task log file to update progress
         """
         if update:
             self._check_job_status()
+            if save_file_path:
+                self.save(save_file_path)
         current_time = 0
         if self.task_data['status'] is CANCELLED:
             print("Job cancelled by user")
@@ -612,6 +616,8 @@ class Task():
                     time.sleep(poll_time)
                     current_time += poll_time
             self._print_job_status()
+            if save_file_path:
+                self.save(save_file_path)
 
     def _print_job_status(self, prefix=''):
         """ Prints readable job status """
