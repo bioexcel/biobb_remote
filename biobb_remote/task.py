@@ -7,6 +7,8 @@ import pickle
 import json
 import time
 
+from os.path import join as opj
+
 from biobb_remote.ssh_session import SSHSession
 from biobb_remote.ssh_credentials import SSHCredentials
 
@@ -57,7 +59,7 @@ class DataBundle():
         """
         try:
             self.files = list(
-                map(lambda x: dir_path+'/'+x, os.listdir(dir_path)))
+                map(lambda x: opj(dir_path, x), os.listdir(dir_path)))
         except IOError as err:
             sys.exit(err)
 
@@ -84,9 +86,10 @@ class Task():
             * host (**str**): Remote host
             * userid (**str**): remote user id
             * look_for_keys (**bool**): Look for keys in user's .ssh directory
+            * debug_ssh (**bool**): Open SSH session with debug activated
     """
 
-    def __init__(self, host=None, userid=None, look_for_keys=True):
+    def __init__(self, host=None, userid=None, look_for_keys=True, debug_ssh=False):
         self.id = str(uuid.uuid4())
         #self.description = description
         self.ssh_data = SSHCredentials(
@@ -94,6 +97,7 @@ class Task():
         self.task_data = {'id': self.id, 'modules': []}
         self.ssh_session = None
         self.host_config = None
+        self.debug = debug_ssh
         self.commands = {}
         self.modified = False
 
@@ -150,7 +154,9 @@ class Task():
                     pickle.dump(self.task_data, task_file)
             else:
                 sys.exit("ERROR: Mode ({}) not supported")
+        
         self.modified = False
+        
         if verbose:
             print("Task log saved on ", save_file_path)
 
@@ -357,17 +363,17 @@ class Task():
             sys.exit("Error: Create input data bundle first")
 
         #remote_files = self.ssh_session.run_sftp('listdir', self._remote_wdir())
-        remote_stats = self.get_remote_file_stats()
+        remote_files = self.get_remote_file_stats()
 
         for file_name in self.task_data['local_data_bundle'].files:            
             file = self.task_data['local_data_bundle'].files[file_name]
-            exists = file_name in remote_stats
+            exists = file_name in remote_files
             if exists:
-                is_new = file['stats'].st_mtime > remote_stats[file_name]['st_mtime']
+                is_new = file['stats'].st_mtime > remote_files[file_name]['st_mtime']
             else:
                 is_new = True
             if not exists or (overwrite and (not new_only or is_new)):
-                remote_file_path = self._remote_wdir() + '/' + file_name
+                remote_file_path = opj(self._remote_wdir(), file_name)
                 self.ssh_session.run_sftp('put', file['full_path'], remote_file_path)
                 print("sending_file: {} -> {}".format(file['full_path'], remote_file_path))
         self.task_data['input_data_loaded'] = True
@@ -499,8 +505,7 @@ class Task():
         self._open_ssh_session()
 
         self.task_data['local_run_script'] = local_run_script
-        self.task_data['remote_run_script'] = self._remote_wdir() + \
-            '/run_script.sh'
+        self.task_data['remote_run_script'] = opj(self._remote_wdir(), 'run_script.sh')
 
         if job_name:
             self.task_data['job_name'] = job_name
@@ -618,7 +623,7 @@ class Task():
         """ Get file from remote working dir"""
         self._open_ssh_session()
         # TODO check remote file exists
-        return self.ssh_session.run_sftp('file', self._remote_wdir() + "/" + file)
+        return self.ssh_session.run_sftp('file', opj(self._remote_wdir(), file))
 
     def get_logs(self):
         """ Get specific queue logs"""
@@ -635,7 +640,7 @@ class Task():
         stats = {}
         for file in self.ssh_session.run_sftp('listdir', self._remote_wdir()):
             stats[file] = vars(self.ssh_session.run_sftp(
-                'lstat', self._remote_wdir() + "/" + file))
+                'lstat', opj(self._remote_wdir(), file)))
         return stats
 
     def get_output_data(self, local_data_path='', files_only=None, overwrite=True, new_only=True, verbose=False):
@@ -643,8 +648,8 @@ class Task():
             Args:
                 * local_data_path (**str**): Path to local working dir
                 * files_only (**[str]**): Only download files in list, if empty download all files
-                * overwrite (**bool**): Overwrite local files id they exist
-                * new_only (**bool**): Overwrite only newer files
+                * overwrite (**bool**): Overwrite local files if they exist
+                * new_only (**bool**): Overwrite only with newer files
                 * verbose (**bool**): Show file status
         """
 
@@ -664,17 +669,21 @@ class Task():
 
         if not os.path.exists(local_data_path):
             os.mkdir(local_data_path)
-
-        #remote_list_dir = self.ssh_session.run_sftp('listdir', self._remote_wdir())
-        remote_stats = self.get_remote_file_stats()
+        if verbose:
+            print("Getting remote file stats")
+        if new_only:
+            remote_files = self.get_remote_file_stats()
+        else:
+            remote_files = self.ssh_session.run_sftp('listdir', self._remote_wdir())
+        
         if files_only:
             for file in files_only:
-                if file not in remote_stats:
+                if file not in remote_files:
                     print(
                         "Warning: file {} is not in the remote working dir".format(file))
 
         remote_file_list = []
-        for file in remote_stats:
+        for file in remote_files:
             if not files_only or file in files_only:
                 remote_file_list.append(file)
 
@@ -685,18 +694,20 @@ class Task():
 
         for file in remote_file_list:
             if file in local_file_names:
-                is_new = remote_stats[file]['st_mtime'] > os.stat(local_data_path + '/' + file).st_mtime
+                is_new = remote_files[file]['st_mtime'] > os.stat(opj(local_data_path, file)).st_mtime
             else:
                 is_new = True
+
             if verbose:
                 print('{:20s} Exists: {}, New: {}'.format(file, file in local_file_names, is_new))
+            
             if (file not in local_file_names) or (overwrite and (not new_only or is_new)):
                 output_data_bundle.add_file(file)
-                output_data_bundle.files[file]['stats'] = remote_stats[file]
+                output_data_bundle.files[file]['stats'] = remote_files[file]
 
         for file in output_data_bundle.files:
-            local_file_path = local_data_path + '/' + file
-            remote_file_path = self._remote_wdir() + '/' + file
+            local_file_path = opj(local_data_path, file)
+            remote_file_path = opj(self._remote_wdir(), file)
             self.ssh_session.run_sftp('get', remote_file_path, local_file_path)
 
             print("getting_file: {} -> {}".format(remote_file_path, local_file_path))
@@ -708,8 +719,7 @@ class Task():
     def clean_remote(self):
         """ Remove data from remote host """
         self._open_ssh_session()
-        print("Removing remote data for job {}".format(
-            self.task_data['remote_job_id']))
+        print("Removing remote data for task {}".format(self.id))
         self.ssh_session.run_command('rm -rf ' + self._remote_wdir())
         if 'output_data_path' in self.task_data:
             del self.task_data['output_data_path']
@@ -725,5 +735,5 @@ class Task():
             return False
         if not self.ssh_data:
             sys.exit("No credentials available")
-        self.ssh_session = SSHSession(ssh_data=self.ssh_data)
+        self.ssh_session = SSHSession(ssh_data=self.ssh_data, debug=self.debug)
         return False
