@@ -352,7 +352,7 @@ BSC (http://www.bsc.es/) & IRB (https://www.irbbarcelona.org/) for the European 
 * (c) 2015-2020 [Institute for Research in Biomedicine](https://www.irbbarcelona.org/)
 
 Licensed under the
-[GNU Lesser General Public License v3.0](https://www.gnu.org/licenses/lgpl-3.0.html), see the file
+[GNU Lesser General Public License v2.1](https://www.gnu.org/licenses/old-licenses/lgpl-2.1.html), see the file
 [LICENSE](LICENSE) for details.
 
 ![](https://bioexcel.eu/wp-content/uploads/2015/12/Bioexcell_logo_1080px_transp.png "Bioexcel")
