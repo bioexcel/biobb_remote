@@ -241,7 +241,7 @@ Generates a command line for queue script. Can be used to launch a biobb module 
 * cmd_settings (**dict**): Additional settings to add to the command line, pre-set bundles can be configured in host config data.
 
 ~~~
-(void) task.submit(job_name=None, queue_settings='default', modules=None, local_run_script='', conda_env='', poll_time=0)
+(void) task.submit(job_name=None, queue_settings='default', modules=None, local_run_script='', conda_env='', save_file_path=None, poll_time=0)
 ~~~
 Submits task to remote. Optionally waits until completion.
 * job_name (**str**): Job name to display in the queuing system. Stdout/stderr logs are named as job.name.(out|err). Optional, defaults to queue default behaviour.
@@ -249,6 +249,7 @@ Submits task to remote. Optionally waits until completion.
 * modules (**str**): modules to activate (defined in host configuration)
 * conda_env (**str**): Conda environment to activate 
 * local_run_script (**str**): Path to local script to run or a string with the script itself (identified by leading '#' tag)
+* save_file_path (**str**): Path to task log file to save state after submit
 * poll_time (**int**): if set, polls periodically for job completion (seconds)
 
 ~~~
