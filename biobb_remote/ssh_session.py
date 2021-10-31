@@ -17,7 +17,7 @@ class SSHSession():
             * credentials_path (**str**): Path to packed credentials file to use
             * private_path (**str**): Path to private key file
             * passwd (**str**): Password to decrypt credentials
-            * debug (**bool**): Prints verbose debug information on connection
+            * debug (**bool**): Prints (very) verbose debug information on ssh transactions
     """
     
     def __init__(self, ssh_data=None, credentials_path=None, private_path=None, passwd=None, debug=False):
@@ -32,6 +32,7 @@ class SSHSession():
         
         self.ssh = SSHClient()
         self.ssh.set_missing_host_key_policy(AutoAddPolicy())
+        self.sftp = None
        
         if debug:
             paramiko.common.logging.basicConfig(level=paramiko.common.DEBUG)
@@ -51,14 +52,16 @@ class SSHSession():
     def run_command(self, command):
         """ Runs command on remote, produces stdout, stderr tuple
             Args:
-                * command (**str**): Command to execute on remote
+                * command (**str**| list(**str**)): Command to execute on remote
         """
+        if isinstance(command, list):
+            command = ' '.join(command)
         if self.ssh:
             stdin, stdout, stderr = self.ssh.exec_command(command)
         return ''.join(stdout), ''.join(stderr)
 
 
-    def run_sftp(self, oper, input_file_path, output_file_path=''):
+    def run_sftp(self, oper, input_file_path, output_file_path='', reuse_session=True):
         """ Runs SFTP session on remote
             Args:
                 * oper (**str**): Operation to perform, one of 
@@ -69,27 +72,32 @@ class SSHSession():
                     * listdir (returns a list of files in remote input_file_path
                 * input_file_path (**str**): Input file path or input string
                 * output_file_path (**str**): Output file path
+                * reuse_session (**bool**): Re-use active SFTP session (Default T)
         """
-        sftp = self.ssh.open_sftp()
+        
+        #Re-using active sftp session
+        if not self.sftp or not reuse_session:
+            self.sftp = self.ssh.open_sftp()
+        
         try:
             if oper == 'get':
-                sftp.get(input_file_path, output_file_path)
+                self.sftp.get(input_file_path, output_file_path)
             elif oper == 'put':
-                sftp.put(input_file_path, output_file_path)
+                self.sftp.put(input_file_path, output_file_path)
             elif oper == 'create':
-                with sftp.file(output_file_path, "w") as remote_fileh:
+                with self.sftp.file(output_file_path, "w") as remote_fileh:
                     remote_fileh.write(input_file_path)
 #            elif oper == 'open':
 #                return sftp.open(input_file_path)
             elif oper == 'file':
-                with sftp.file(input_file_path, "r") as remote_file:
+                with self.sftp.file(input_file_path, "r") as remote_file:
                     return remote_file.read().decode()
             elif oper == "listdir":
-                return sftp.listdir(input_file_path)
+                return self.sftp.listdir(input_file_path)
 #            elif oper == 'rmdir':
 #                return sftp.rmdir(input_file_path)
             elif oper == 'lstat':
-                return sftp.lstat(input_file_path)
+                return self.sftp.lstat(input_file_path)
             else:
                 print('Unknown sftp command', oper)
                 return True
@@ -102,3 +110,8 @@ class SSHSession():
         ''' Test whether the defined session is active'''
         return self.ssh and self.ssh.get_transport().is_active()
 
+    def close(self):
+        ''' Closes active SSH session'''
+        if self.ssh:
+            self.ssh.close()
+            self.ssh = None

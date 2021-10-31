@@ -1,0 +1,17 @@
+name: biobb_remote_test
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - biobb_analysis==3.7.0
+  - biobb_io==3.7.0
+  - biobb_model==3.7.0
+  - biobb_md==3.7.0
+  - nb_conda_kernels
+  - plotly
+  - nglview
+  - simpletraj
+  - conda
+  - jupyter
+  - paramiko
+

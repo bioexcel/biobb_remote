@@ -148,12 +148,13 @@ task.JOB_STATUS (dict)
 ### Methods
 
 ~~~
-task=Task(host=None, userid=None, look_for_keys=True)
+task=Task(host=None, userid=None, look_for_keys=True, debug_ssh=False)
 ~~~
  Classe to handle task execution 
 * host (**str**): Remote host
 * userid (**str**): Remote user id
 * look_for_keys (**bool**): Look for keys available in user's .ssh directory
+  debug_ssh (**bool**): Open SSH session with debug activated
 
 ~~~
 (void) task.load_data_from_file(file_path, mode='json')
@@ -163,11 +164,12 @@ Loads accumulated task data from external file
 * mode (**str**): Format. Json | Pickle
 
 ~~~
-(void) task.save(save_file_path, mode='json')
+(void) task.save(save_file_path, mode='json', verbose=Falsse)
 ~~~
 Saves current task status in a external file. Can be used to recover session at a later time.
 * save_file_path (**str**): Path to file
 * mode (**str**): Format to use json|pickle.
+* verbose (**bool**): Print additional information
 
 ~~~
 (void) task.set_credentials(credentials, passwd=None):
@@ -214,11 +216,12 @@ Builds local data bundle from a local directory
 * add_files (**bool**): On create, add all files in the directory.
 
 ~~~
-(void) task.send_input_data(remote_base_path, overwrite=True)
+(void) task.send_input_data(remote_base_path, overwrite=True, new_only=True)
 ~~~
 Uploads data bundle files to remote working dir
 * remote_base_path (**str**): Remote base path for all task activites. Each task will create a unique working dir (re-usable).
 * overwrite (**bool**): Upload files even if they already exists in the remote working dir. 
+* new_only (**bool**): Overwrite only with newer files
 
 ~~~
 (str) task.get_remote_py_script(python_import, files, command, properties='')
@@ -249,7 +252,7 @@ Submits task to remote. Optionally waits until completion.
 * modules (**str**): modules to activate (defined in host configuration)
 * conda_env (**str**): Conda environment to activate 
 * local_run_script (**str**): Path to local script to run or a string with the script itself (identified by leading '#' tag)
-* save_file_path (**str**): Path to task log file to save state after submit
+* save_file_path (**str**): Path to local task log file to update after submit (Default None),
 * poll_time (**int**): if set, polls periodically for job completion (seconds)
 
 ~~~
@@ -264,11 +267,12 @@ Cancels running task
 Check queue status. Returns output of the remote appropriate command
 
 ~~~
-(void) check_job(update=True, poll_time=0)
+(void) check_job(update=True, poll_time=0, save_file_path=None)
 ~~~
 Prints job status to stdout
 * update (**bool**): update status before printing it
 * poll_time (**int**): poll until job finished. Poll interval in seconds.
+* save_file_path (**str**): Path to local task log file to update status (Default None),
 
 ~~~
 (void) task.get_remote_file(file):
@@ -282,12 +286,13 @@ Gets file from remote working dir
 Get queue logs
 
 ~~~
-(void) task.get_output_data(local_data_path='', files_only=None, overwrite=False)
+(void) task.get_output_data(local_data_path='', files_only=None, overwrite=True, new_only=True)
 ~~~
 Downloads remote working dir contents to local path
 * local_data_path (**str**): Path to local directory 
 * files_only (**[str]**): Only download files in list, if empty download all files 
 * overwrite (**bool**): Overwrite local files if they exist
+* new_only (**bool**): Overwrite only with newer files
 
 ~~~
 (void) task.clean_remote()
@@ -336,7 +341,7 @@ slurm_test [-h] --keys_path KEYS_PATH [--script SCRIPT_PATH]
 ~~~
 
 ### Version
-v1.0.0 December 2020
+v1.2.0 October 2021
 
 ### Copyright & Licensing
 This software has been developed in the MMB group (http://mmb.irbbarcelona.org) at the
