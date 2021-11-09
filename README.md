@@ -164,7 +164,7 @@ Loads accumulated task data from external file
 * mode (**str**): Format. Json | Pickle
 
 ~~~
-(void) task.save(save_file_path, mode='json', verbose=Falsse)
+(void) task.save(save_file_path, mode='json', verbose=False)
 ~~~
 Saves current task status in a external file. Can be used to recover session at a later time.
 * save_file_path (**str**): Path to file
