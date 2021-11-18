@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="biobb_remote",
-    version="1.2.1",
+    version="1.2.2",
     author="Biobb developers",
     author_email="gelpi@ub.edu",
     description="Biobb_remote is the Biobb module for remote execution via ssl.",
@@ -20,7 +20,7 @@ setuptools.setup(
     packages=setuptools.find_packages(exclude=['docs', 'test']),
     include_package_data=True,
     zip_safe=False,
-    install_requires=[],
+    install_requires=['paramiko==2.7.2'],
     python_requires='>=3',
     entry_points={
         "console_scripts": [

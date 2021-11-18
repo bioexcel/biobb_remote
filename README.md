@@ -341,7 +341,7 @@ slurm_test [-h] --keys_path KEYS_PATH [--script SCRIPT_PATH]
 ~~~
 
 ### Version
-v1.2.1 November 2021
+v1.2.2 November 2021
 
 ### Copyright & Licensing
 This software has been developed in the MMB group (http://mmb.irbbarcelona.org) at the
