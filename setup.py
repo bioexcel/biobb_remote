@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="biobb_remote",
-    version="1.2.0",
+    version="1.2.1",
     author="Biobb developers",
     author_email="gelpi@ub.edu",
     description="Biobb_remote is the Biobb module for remote execution via ssl.",
@@ -18,14 +18,16 @@ setuptools.setup(
         "Bioexcel": "https://bioexcel.eu/"
     },
     packages=setuptools.find_packages(exclude=['docs', 'test']),
+    include_package_data=True,
+    zip_safe=False,
     install_requires=[],
     python_requires='>=3',
     entry_points={
         "console_scripts": [
-            "credentials = scripts.credentials:main",
-            "scp_service = scripts.scp_service:main",
-            "slurm_test = scripts.slurm_test:main",
-            "ssh_command = scripts.ssh_command:main"
+            "credentials = biobb_remote.scripts.credentials:main",
+            "scp_service = biobb_remote.scripts.scp_service:main",
+            "slurm_test = biobb_remote.scripts.slurm_test:main",
+            "ssh_command = biobb_remote.scripts.ssh_command:main"
         ]
     },
     classifiers=(
