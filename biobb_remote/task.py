@@ -344,21 +344,37 @@ class Task():
             self.task_data['local_data_bundle'].add_dir(local_data_path)
         self.modified = True
 
-    def send_input_data(self, remote_base_path, overwrite=True, new_only=True):
-        """ Uploads data to remote working dir
+    def prep_remote_workdir(self, remote_base_path):
+        """ Creates remote working dir
             Args:
                 * remote_base_path (**str**): Path to remote base directory, task folders created within
-                * overwrite (**bool**): Overwrite files with the same name if any
-                * new_only (**bool**): Overwrite only with newer files
         """
-
-        self._open_ssh_session()
-
         self.task_data['remote_base_path'] = remote_base_path
         stdout, stderr = self.ssh_session.run_command(
             'mkdir -p ' + self._remote_wdir())
         if stderr:
             sys.exit('Error while creating remote working directory: ' + stderr)
+
+
+    def send_input_data(self, remote_base_path, create_dir=True, overwrite=True, new_only=True):
+        """ Uploads data to remote working dir
+            Args:
+                * remote_base_path (**str**): Path to remote base directory, task folders created within
+                * create_dir (**bool**): Creates remote working dir
+                * overwrite (**bool**): Overwrite files with the same name if any
+                * new_only (**bool**): Overwrite only with newer files
+        """
+
+        self._open_ssh_session()
+        
+        if create_dir:
+            self.prep_remote_workdir(remote_base_path)
+
+        # self.task_data['remote_base_path'] = remote_base_path
+        # stdout, stderr = self.ssh_session.run_command(
+        #     'mkdir -p ' + self._remote_wdir())
+        # if stderr:
+        #     sys.exit('Error while creating remote working directory: ' + stderr)
 
         if not self.task_data['local_data_bundle']:
             sys.exit("Error: Create input data bundle first")
