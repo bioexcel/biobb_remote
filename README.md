@@ -222,10 +222,11 @@ Creates empty remote working dir (remote_base_path/task.id)
 * remote_base_path (**str**): Path to remote base directory, task folders created within
 
 ~~~
-(void) task.send_input_data(remote_base_path, overwrite=True, new_only=True)
+(void) task.send_input_data(remote_base_path, create_dir=True, overwrite=True, new_only=True)
 ~~~
 Uploads data bundle files to remote working dir
 * remote_base_path (**str**): Remote base path for all task activites. Each task will create a unique working dir (re-usable).
+* create_dir(**str**): Create remote working directory before sending data.
 * overwrite (**bool**): Upload files even if they already exists in the remote working dir. 
 * new_only (**bool**): Overwrite only with newer files
 
