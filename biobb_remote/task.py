@@ -488,7 +488,7 @@ class Task():
         if conda_env:
             scr_lines.append('conda activate ' + conda_env)
 
-        if self.task_data['local_run_script'].find('#') == -1:
+        if self.task_data['local_run_script'].find('#script') == -1:
             with open(self.task_data['local_run_script'], 'r') as scr_file:
                 script = '\n'.join(scr_lines) + '\n' + scr_file.read()
         else:
