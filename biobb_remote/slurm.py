@@ -1,4 +1,4 @@
-""" Task adjusted to SLURM manager"""
+""" Module to define characteristics of SLURM queue manager"""
 
 import sys
 
@@ -26,11 +26,27 @@ SLURM_CODES = {
 }
 
 class Slurm(Task):
+    """
+    | biobb_remote slurm.Slurm
+    | Task Class to set specific SLURM settings
+    | Extends biobb_remote.task.Task
+    
+    Args:
+        host (str) (Optional): (None) FQD for remote host.
+        userid (str) (Optional): (None) Remote user id
+        look_for_keys (bool) (Optional): (True) Allow using local user's credentials
+    
+    """
     def __init__(self, host=None, userid=None, look_for_keys=True):
         Task.__init__(self, host, userid, look_for_keys)
         self.commands = SLURM_COMMANDS
 
     def _get_queue_settings_string_array(self):
+        """
+        | Private, Slurm._get_queue_settings_string_array
+        | Builds SLURM queue directives array
+        
+        """
         scr_lines = []
 
         for key in self.task_data['queue_settings']:
@@ -44,5 +60,12 @@ class Slurm(Task):
         return scr_lines
 
     def _get_submitted_job_id(self, submit_output):
+        """
+        | Private: Slurm._get_submitted_job_id
+        | Return Slurm job id after submission
+        
+        Args:
+            submit_output (str): Output of the submit command
+        """
         wds = submit_output.split(' ')
         return wds[3].strip('\n')
