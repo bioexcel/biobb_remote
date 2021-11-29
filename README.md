@@ -216,10 +216,17 @@ Builds local data bundle from a local directory
 * add_files (**bool**): On create, add all files in the directory.
 
 ~~~
-(void) task.send_input_data(remote_base_path, overwrite=True, new_only=True)
+(void) task.prep_remote_workdir(remote_base_path)
+~~~
+Creates empty remote working dir (remote_base_path/task.id)
+* remote_base_path (**str**): Path to remote base directory, task folders created within
+
+~~~
+(void) task.send_input_data(remote_base_path, create_dir=True, overwrite=True, new_only=True)
 ~~~
 Uploads data bundle files to remote working dir
 * remote_base_path (**str**): Remote base path for all task activites. Each task will create a unique working dir (re-usable).
+* create_dir(**str**): Create remote working directory before sending data.
 * overwrite (**bool**): Upload files even if they already exists in the remote working dir. 
 * new_only (**bool**): Overwrite only with newer files
 
@@ -341,8 +348,8 @@ slurm_test [-h] --keys_path KEYS_PATH [--script SCRIPT_PATH]
 ~~~
 
 ### Version
-v1.2.0 October 2021
-
+v1.2.3 November 2021
+ 
 ### Copyright & Licensing
 This software has been developed in the MMB group (http://mmb.irbbarcelona.org) at the
 BSC (http://www.bsc.es/) & IRB (https://www.irbbarcelona.org/) for the European BioExcel (http://bioexcel.eu/), funded by the European Commission
