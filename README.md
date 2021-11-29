@@ -25,17 +25,17 @@ Stores SSHCredentials object in a external file
 * passwd (**str**): Password to encrypt private key (optional)
 
 ~~~
-(void) credentials.load_from_file(credentials_path, passwd=None) 
+(void) credentials.load_from_file(credentials_path, passwd=None)
 ~~~
 Recovers SSHCredentials object from disk file
-* credentials_path (**str**): Path to packed credentials file. 
+* credentials_path (**str**): Path to packed credentials file.
 * passwd (**str**): Passwd to decrypt private key (optional)
 
 ~~~
-(void) credentials.load_from_private_key_file(private_path, passwd=None) 
+(void) credentials.load_from_private_key_file(private_path, passwd=None)
 ~~~
 Recovers SSHCredentials object from disk file
-* private_path (**str**): Path to private key file. 
+* private_path (**str**): Path to private key file.
 * passwd (**str**): Passwd to decrypt private key (optional)
 
 ~~~
@@ -93,7 +93,7 @@ Runs command on remote. Returns stdout + stderr
 (bool | file_handle) ssh_session.run_sftp(oper, input_file_path, output_file_path='')
 ~~~
 Runs SFTP session on remote
-* oper (**str**): Operation to perform, one of 
+* oper (**str**): Operation to perform, one of
         * get (gets a single file from input_file_path (remote) to output_file_path (local) )
         * put (puts a single file from input_file_path (local) to output_file_path (remote)
         * create (creates a file in output_file_path (remote) from input_file_path string-
@@ -150,7 +150,7 @@ task.JOB_STATUS (dict)
 ~~~
 task=Task(host=None, userid=None, look_for_keys=True, debug_ssh=False)
 ~~~
- Classe to handle task execution 
+ Classe to handle task execution
 * host (**str**): Remote host
 * userid (**str**): Remote user id
 * look_for_keys (**bool**): Look for keys available in user's .ssh directory
@@ -184,7 +184,7 @@ Loads ssh credentials from SSHCredentials object or from a external file
 Inserts private key from external file
 * private_path (**str**): Path to private key file
 * passwd (**str**, optional): Password to decrypt private key
-  
+
 ~~~
 (void) task.load_host_config(host_config_path)
 ~~~
@@ -197,7 +197,7 @@ Loads a pre-defined host configuration file (json format)
 Generates a custom queue setting based on existing one
 * ref_setting (**str**): Base settings to modify
 * patch (**dict**): Patch to apply
-* clean (**bool**): Clean existing settings 
+* clean (**bool**): Clean existing settings
 
 ~~~
 (void) task.prep_auto_settings(total_cores=0, nodes=0, cpus_per_task=1,  num_gpus=0)
@@ -237,7 +237,7 @@ Generates 1 line python code to be executed in the queue script using python -c
 * python_import (**str**): Python import line(s) to include (; separated)
 * files (**dict**): File names to associate to biobb required path parameters
 * command (**str**): biobb class to launch
-* properties (**dict** | **str**): Either a dict, path to a json or yaml config file or a 1-line Json with the required biobb parameters 
+* properties (**dict** | **str**): Either a dict, path to a json or yaml config file or a 1-line Json with the required biobb parameters
 
 ~~~
 (str) task.get_remote_comm_line(command, files, use_biobb=False, properties='', cmd_settings=''):
@@ -247,7 +247,7 @@ Generates a command line for queue script. Can be used to launch a biobb module 
 * command (**str**): Command to execute
 * files (**dict**): Input/output files. "--" prefix added if only a parameter name is provided
 * use_biobb (**bool**): Set to prepend biobb path on host
-* properties (**dict**): BioBB properties 
+* properties (**dict**): BioBB properties
 * cmd_settings (**dict**): Additional settings to add to the command line, pre-set bundles can be configured in host config data.
 
 ~~~
@@ -257,7 +257,7 @@ Submits task to remote. Optionally waits until completion.
 * job_name (**str**): Job name to display in the queuing system. Stdout/stderr logs are named as job.name.(out|err). Optional, defaults to queue default behaviour.
 * queue_settings (**str**): Label for set of queue settings (defined in host configuration). Use 'custom' for user defined settings (see set_custom_settings)
 * modules (**str**): modules to activate (defined in host configuration)
-* conda_env (**str**): Conda environment to activate 
+* conda_env (**str**): Conda environment to activate
 * local_run_script (**str**): Path to local script to run or a string with the script itself (identified by leading '#' tag)
 * save_file_path (**str**): Path to local task log file to update after submit (Default None),
 * poll_time (**int**): if set, polls periodically for job completion (seconds)
@@ -267,7 +267,7 @@ Submits task to remote. Optionally waits until completion.
 ~~~
 Cancels running task
 * remove_data (**bool**): Removes remoted workign directory.
- 
+
 ~~~
 (str) task.check_queue()
 ~~~
@@ -296,8 +296,8 @@ Get queue logs
 (void) task.get_output_data(local_data_path='', files_only=None, overwrite=True, new_only=True)
 ~~~
 Downloads remote working dir contents to local path
-* local_data_path (**str**): Path to local directory 
-* files_only (**[str]**): Only download files in list, if empty download all files 
+* local_data_path (**str**): Path to local directory
+* files_only (**[str]**): Only download files in list, if empty download all files
 * overwrite (**bool**): Overwrite local files if they exist
 * new_only (**bool**): Overwrite only with newer files
 
@@ -348,15 +348,20 @@ slurm_test [-h] --keys_path KEYS_PATH [--script SCRIPT_PATH]
 ~~~
 
 ### Version
+<<<<<<< HEAD
 v1.2.3 November 2021
  
+=======
+v1.2.2 November 2021
+
+>>>>>>> 88a0030f90c35282ac9b3e55c0cb332dba0e3230
 ### Copyright & Licensing
 This software has been developed in the MMB group (http://mmb.irbbarcelona.org) at the
 BSC (http://www.bsc.es/) & IRB (https://www.irbbarcelona.org/) for the European BioExcel (http://bioexcel.eu/), funded by the European Commission
 (EU H2020 [675728](http://cordis.europa.eu/projects/675728)).
 
-* (c) 2015-2020 [Barcelona Supercomputing Center](https://www.bsc.es/)
-* (c) 2015-2020 [Institute for Research in Biomedicine](https://www.irbbarcelona.org/)
+* (c) 2015-2021 [Barcelona Supercomputing Center](https://www.bsc.es/)
+* (c) 2015-2021 [Institute for Research in Biomedicine](https://www.irbbarcelona.org/)
 
 Licensed under the
 [GNU Lesser General Public License v2.1](https://www.gnu.org/licenses/old-licenses/lgpl-2.1.html), see the file
