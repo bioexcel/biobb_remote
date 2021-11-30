@@ -26,9 +26,7 @@ Using ANACONDA:
 
         conda install -c bioconda "biobb_remote>=1.2.2"
 
-* Usage: With conda installation BioBBs can be used with the [Python API documentation](https://
-biobb-remote.readthedocs.io/en/latest/modules.html) and the [Command Line documentation](https://
-biobb-remote.readthedocs.io/en/latest/command_line.html)
+* Usage: With conda installation BioBBs can be used with the [Python API documentation](https://biobb-remote.readthedocs.io/en/latest/modules.html) and the [Command Line documentation](https://biobb-remote.readthedocs.io/en/latest/command_line.html)
 
 ### Copyright & Licensing
 This software has been developed in the MMB group (http://mmb.irbbarcelona.org) at the
