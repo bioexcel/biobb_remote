@@ -76,18 +76,18 @@ slurm_test [-h] --keys_path KEYS_PATH [--script SCRIPT_PATH]
 * **get_file**: Get single remote file
 
 ### optional arguments:
-    -h, --help            show this help message and exit
-    --keys_path KEYS_PATH Credentials file path
-    --script LOCAL_RUN_SCRIPT Path to local script
-    --local_data LOCAL_DATA_PATH Local data bundle
-    --remote REMOTE_PATH  Remote working dir
-    --queue_settings QUEUE_SETTINGS Predefined queue settings
-    --modules MODULES     Software modules to load
-    --task_data_file TASK_FILE_PATH Store for task data
-    --overwrite           Overwrite data in output local directory
-    --task_file_type TASK_FILE_TYPE Format for task data file (json, pickle). Default:json
-    --poll POLLING_INT    Polling interval (min), 0: No polling (default)
-    --remote_file REMOTE_FILE Remote file name to download (get_file)
+    -h, --help                      - show this help message and exit
+    --keys_path KEYS_PATH           - Credentials file path
+    --script LOCAL_RUN_SCRIPT       - Path to local script
+    --local_data LOCAL_DATA_PATH    - Local data bundle
+    --remote REMOTE_PATH            - Remote working dir
+    --queue_settings QUEUE_SETTINGS - Predefined queue settings
+    --modules MODULES               - Software modules to load
+    --task_data_file TASK_FILE_PATH - Store for task data
+    --overwrite                     - Overwrite data in output local directory
+    --task_file_type TASK_FILE_TYPE - Format for task data file (json, pickle). Default:json
+    --poll POLLING_INT              - Polling interval (seg), 0: No polling (default)
+    --remote_file REMOTE_FILE       - Remote file name to download (get_file)
 
 ***
 
