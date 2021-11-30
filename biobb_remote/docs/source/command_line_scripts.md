@@ -52,9 +52,11 @@ Simple remote ssh command
 ~~~
 ssh_command [-h] --keys_path KEYS_PATH [command [command ...]]
 ~~~
-    command               Remote command
-    -h, --help            show this help message and exit
-    --keys_path KEYS_PATH Credentials file path
+
+    command               - Remote command
+
+    -h, --help            - show this help message and exit
+    --keys_path KEYS_PATH - Credentials file path
 ***
 ## slurm_test
 Complete set of functions to manage slurm submissions remotely

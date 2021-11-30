@@ -1,3 +1,7 @@
+[![](https://readthedocs.org/projects/biobb-remote/badge/?version=latest)](https://biobb-remote.readthedocs.io/en/latest/?badge=latest)
+[![](https://img.shields.io/badge/install%20with-bioconda-brightgreen.svg?style=flat)](https://anaconda.org/bioconda/biobb_remote)
+[![](https://img.shields.io/badge/license-lgpl__2__1-blue)](https://www.gnu.org/licenses/old-licenses/lgpl-2.1.html)
+
 # biobb_remote
 
 ### Introduction
