@@ -74,11 +74,11 @@ class SSHSession():
         
         Args:
             oper (str): Operation to perform, one of:
-                **get** - gets a single file from input_file_path (remote) to output_file_path (local).
-                **put** - puts a single file from input_file_path (local) to output_file_path (remote).
-                **create** - creates a file in output_file_path (remote) from input_file_path string.
-                **file** - opens a remote file in input_file_path for read). Returns a file handle.
-                **listdir** - returns a list of files in remote input_file_path.
+                * **get** - gets a single file from input_file_path (remote) to output_file_path (local).
+                * **put** - puts a single file from input_file_path (local) to output_file_path (remote).
+                * **create** - creates a file in output_file_path (remote) from input_file_path string.
+                * **file** - opens a remote file in input_file_path for read). Returns a file handle.
+                * **listdir** - returns a list of files in remote input_file_path.
             input_file_path (str): Input file path or input string
             output_file_path (str) (Optional): Output file path. Not required in some ops. 
             reuse_session (bool) (Optional): (Treu) Re-use active SFTP session
