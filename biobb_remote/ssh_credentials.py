@@ -39,7 +39,7 @@ class SSHCredentials:
             
         Args:
             credentials_path (str): Path to packed credentials file.
-            passwd (str) (Optional): (None) Use to decrypt private key.
+            passwd (str): (None) Use to decrypt private key.
         
         """
         try:
@@ -58,7 +58,7 @@ class SSHCredentials:
             
         Args:
             private_path (str): Path to private key file.
-            passwd (str) (Optional): (None) Password to decrypt private key.
+            passwd (str): (None) Password to decrypt private key.
         """
         try:
             self.key = RSAKey.from_private_key_file(private_path, passwd)
@@ -70,7 +70,7 @@ class SSHCredentials:
         Generates RSA keys pair
             
         Args:
-            nbits (int): (2048) Number of bits of the generated key.
+            nbits (int): ('2048') Number of bits of the generated key.
         """
         self.key = RSAKey.generate(nbits)
         
