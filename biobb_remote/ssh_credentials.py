@@ -70,7 +70,7 @@ class SSHCredentials:
         Generates RSA keys pair
             
         Args:
-            nbits (int): ('2048') Number of bits of the generated key.
+            nbits (int): \(2048\) Number of bits of the generated key.
         """
         self.key = RSAKey.generate(nbits)
         
