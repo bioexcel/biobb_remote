@@ -1,4 +1,4 @@
-""" Module to manage ssl credentials and session """
+""" Module to manage SSH sessions """
 __author__ = "gelpi"
 __date__ = "$08-March-2019 17:32:38$"
 
@@ -10,14 +10,18 @@ import paramiko
 from io import StringIO
 from paramiko import SSHClient, AutoAddPolicy, AuthenticationException, SSHException, RSAKey
 
-class SSHSession():
-    """ Class wrapping ssh operations 
-        Args:
-            * ssh_data (**SSHCredentials**): SSHCredentials object
-            * credentials_path (**str**): Path to packed credentials file to use
-            * private_path (**str**): Path to private key file
-            * passwd (**str**): Password to decrypt credentials
-            * debug (**bool**): Prints (very) verbose debug information on ssh transactions
+
+class SSHSession:
+    """ 
+    | biobb_remote ssh_session.SSHSession
+    | Class wrapping ssh operations 
+        
+    Args:
+        ssh_data (SSHCredentials) (Optional): (None) SSHCredentials object.
+        credentials_path (str) (Optional): (None) Path to packed credentials file to use.
+        private_path (str) (Optional): (None) Path to private key file.
+        passwd (str) (Optional): (None) Password to decrypt credentials.
+        debug (bool) (Optional): (False) Prints (very) verbose debug information on ssh transactions.
     """
     
     def __init__(self, ssh_data=None, credentials_path=None, private_path=None, passwd=None, debug=False):
@@ -50,9 +54,11 @@ class SSHSession():
             sys.exit(err)
 
     def run_command(self, command):
-        """ Runs command on remote, produces stdout, stderr tuple
-            Args:
-                * command (**str**| list(**str**)): Command to execute on remote
+        """ SSHSession.run_command
+        Runs a shell command on remote, produces stdout, stderr tuple
+            
+        Args:
+            command (str | list(str)): Command  or list of commands to execute on remote.
         """
         if isinstance(command, list):
             command = ' '.join(command)
@@ -60,19 +66,21 @@ class SSHSession():
             stdin, stdout, stderr = self.ssh.exec_command(command)
         return ''.join(stdout), ''.join(stderr)
 
-
     def run_sftp(self, oper, input_file_path, output_file_path='', reuse_session=True):
-        """ Runs SFTP session on remote
-            Args:
-                * oper (**str**): Operation to perform, one of 
-                    * get (gets a single file from input_file_path (remote) to output_file_path (local) )
-                    * put (puts a single file from input_file_path (local) to output_file_path (remote)
-                    * create (creates a file in output_file_path (remote) from input_file_path string-
-                    * file (opens a remote file in input_file_path for read). Returns a file handle.
-                    * listdir (returns a list of files in remote input_file_path
-                * input_file_path (**str**): Input file path or input string
-                * output_file_path (**str**): Output file path
-                * reuse_session (**bool**): Re-use active SFTP session (Default T)
+        """ SSHSession.run_sftp
+        Opens a SFTP session on remote and execute some file operation
+        
+        Args:
+            oper (str - Operation to perform):
+                * **get** - gets a single file from input_file_path (remote) to output_file_path (local).
+                * **put** - puts a single file from input_file_path (local) to output_file_path (remote).
+                * **create** - creates a file in output_file_path (remote) from input_file_path string.
+                * **file** - opens a remote file in input_file_path for read). Returns a file handle.
+                * **listdir** - returns a list of files in remote input_file_path.
+
+            input_file_path (str): Input file path or input string
+            output_file_path (str): ('') Output file path. Not required in some ops.
+            reuse_session (bool): (True) Re-use active SFTP session
         """
         
         #Re-using active sftp session
@@ -107,11 +115,16 @@ class SSHSession():
         return False
     
     def is_active(self):
-        ''' Test whether the defined session is active'''
+        """ SSHSession.is_active
+        Tests whether the defined session is active
+        """
         return self.ssh and self.ssh.get_transport().is_active()
 
     def close(self):
-        ''' Closes active SSH session'''
+        """ SSHSession.close
+        Closes active SSH session
+        """
         if self.ssh:
             self.ssh.close()
             self.ssh = None
+            
