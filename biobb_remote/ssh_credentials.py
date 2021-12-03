@@ -9,6 +9,9 @@ import pickle
 import paramiko
 from io import StringIO
 from paramiko import SSHClient, AutoAddPolicy, AuthenticationException, RSAKey
+from biobb_common.tools import file_utils as fu
+from biobb_common.tools.file_utils import launchlogger
+
 
 class SSHCredentials():
     """ 
@@ -21,7 +24,7 @@ class SSHCredentials():
         generate_key (bool) (Optional): (False) Generate a pub/private key pair.
         look_for_keys (bool) (Optional): (True) Look for keys in user's .ssh directory if no key provided.
     """
-    def __init__(self, host='', userid='', generate_key=False, look_for_keys=True):
+    def __init__(self, host='', userid='', generate_key=False, look_for_keys=True, out_log=None, err_log=None):
         self.host = host
         self.userid = userid
         self.key = None
@@ -31,6 +34,20 @@ class SSHCredentials():
         self.remote_auth_keys = []
         if generate_key:
             self.generate_key()
+        self.out_log = out_log
+        self.err_log = err_log
+            
+    def _log(self, msg, label='INFO'):
+        if label != 'ERROR':
+            if self.out_log is not None:
+                fu.log(msg, self.out_log)
+            else:
+                print(f"[{label}] {msg}")
+        else:
+            if self.err_log is not None:
+                fu.log(msg, self.err_log)
+            else:
+                print(f"[ERROR] {msg}", file=sys.stderr)
 
     def load_from_file(self, credentials_path, passwd=None):
         """
@@ -46,7 +63,8 @@ class SSHCredentials():
             file = open(credentials_path, 'rb')
             data = pickle.load(file)
         except IOError as err:
-            sys.exit(err)
+            self._log(err, 'ERROR')
+            sys.exit()
         self.host = data['host']
         self.userid = data['userid']
         self.look_for_keys = data['look_for_keys']
@@ -64,7 +82,8 @@ class SSHCredentials():
         try:
             self.key = RSAKey.from_private_key_file(private_path, passwd)
         except IOError as err:
-            sys.exit(err)
+            self._log(err, 'ERROR')
+            sys.exit()
         
     def generate_key(self, nbits=2048):
         """ 
@@ -158,12 +177,12 @@ class SSHCredentials():
         if not self.check_host_auth():
             if file_bck:
                 self._put_remote_auth_keys(file_bck)
-                print("Previous authorized keys backed up at", ".ssh/authorized_keys." + file_bck)
+                self._log("Previous authorized keys backed up at", ".ssh/authorized_keys." + file_bck)
             self.remote_auth_keys = self.remote_auth_keys + [self.get_public_key()]
             self._put_remote_auth_keys()
-            print('Biobb Public key installed on host')
+            self._log('Biobb Public key installed on host')
         else:
-            print('Biobb Public key already authorized')
+            self._log('Biobb Public key already authorized')
 
     def remove_host_auth(self, file_bck='biobb'):
         """ 
@@ -177,12 +196,12 @@ class SSHCredentials():
         if self.check_host_auth():
             if file_bck:
                 self._put_remote_auth_keys(file_bck)
-                print("Previous authorized keys backed up at", ".ssh/authorized_keys." + file_bck)
+                self._log("Previous authorized keys backed up at", ".ssh/authorized_keys." + file_bck)
             self.remote_auth_keys = [pkey for pkey in self.remote_auth_keys if pkey != self.get_public_key()]
             self._put_remote_auth_keys()
-            print("Biobb Public key removed from host")
+            self._log("Biobb Public key removed from host")
         else:
-            print("Biobb Public key not found in remote")
+            self._log("Biobb Public key not found in remote")
             
 #=================================================================================================================
     def _set_user_ssh_session(self, debug=False):
@@ -205,7 +224,8 @@ class SSHCredentials():
                 username=self.userid,
             )
         except AuthenticationException as err:
-            sys.exit(err)
+            self._log(err, 'ERROR')
+            sys.exit()
 
         self.sftp = self.user_ssh.open_sftp()
 

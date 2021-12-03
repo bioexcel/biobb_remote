@@ -11,6 +11,7 @@ from os.path import join as opj
 
 from biobb_remote.ssh_session import SSHSession
 from biobb_remote.ssh_credentials import SSHCredentials
+from biobb_common.tools import file_utils as fu
 
 UNKNOWN = 0
 SUBMITTED = 1
@@ -40,11 +41,25 @@ class DataBundle():
         remote (bool) (Optional): (False) Marks bundle as remote (no stats are generated)
     
     """
-    def __init__(self, bundle_id, remote=False):
+    def __init__(self, bundle_id, remote=False, out_log=None, err_log=None):
         self.id = bundle_id
         self.files = {}
         self.remote = remote
+        self.out_log = out_log
+        self.err_log = err_log
 
+    def _log(self, msg, label='INFO'):
+        if label != 'ERROR':
+            if self.out_log is not None:
+                fu.log(msg, self.out_log)
+            else:
+                print(f"[{label}] {msg}")
+        else:
+            if self.err_log is not None:
+                fu.log(msg, self.err_log)
+            else:
+                print(f"[ERROR] {msg}", file=sys.stderr)
+    
     def add_file(self, file_path):
         """
         | DataBundle.add_file
@@ -71,7 +86,8 @@ class DataBundle():
             self.files = list(
                 map(lambda x: opj(dir_path, x), os.listdir(dir_path)))
         except IOError as err:
-            sys.exit(err)
+            self._log(err, 'ERROR')
+            sys.exit()
 
     def get_file_names(self):
         """ 
@@ -120,7 +136,7 @@ class Task():
         debug_ssh (bool) (Optional): (False) Open SSH session with debug activated.
     """
 
-    def __init__(self, host=None, userid=None, look_for_keys=True, debug_ssh=False):
+    def __init__(self, host=None, userid=None, look_for_keys=True, debug_ssh=False, out_log=None, err_log=None):
         self.id = str(uuid.uuid4())
         #self.description = description
         self.ssh_data = SSHCredentials(
@@ -131,6 +147,20 @@ class Task():
         self.debug = debug_ssh
         self.commands = {}
         self.modified = False
+        self.out_log = out_log
+        self.err_log = err_log
+
+    def _log(self, msg, label='INFO'):
+        if label != 'ERROR':
+            if self.out_log is not None:
+                fu.log(msg, self.out_log)
+            else:
+                print(f"[{label}] {msg}")
+        else:
+            if self.err_log is not None:
+                fu.log(msg, self.err_log)
+            else:
+                print(f"[ERROR] {msg}", file=sys.stderr)
 
     def load_data_from_file(self, file_path, mode='json'):
         """ 
@@ -161,7 +191,9 @@ class Task():
                     output_data_bundle['id'])
                 self.task_data['output_data_bundle'].files = local_data_bundle['files']
         else:
-            sys.exit("ERROR: file type ({}) not supported".format(mode))
+            self._log(f"file type ({mode}) not supported", 'ERROR')
+            sys.exit()
+            
         self.id = self.task_data['id']
 
     def save(self, save_file_path, mode='json', verbose=False):
@@ -192,12 +224,13 @@ class Task():
                 with open(save_file_path, 'wb') as task_file:
                     pickle.dump(self.task_data, task_file)
             else:
-                sys.exit("ERROR: Mode ({}) not supported")
+                self._log(f"file type ({mode}) not supported", 'ERROR')
+                sys.exit()
         
         self.modified = False
         
         if verbose:
-            print("Task log saved on ", save_file_path)
+            self._log(f"Task log saved on {save_file_path}")
 
 # Credential management
     def set_credentials(self, credentials):
@@ -223,7 +256,7 @@ class Task():
             passwd (str) (Optional): (None) Password to decrypt private key.
         """
         if not self.ssh_data:
-            print("Create credentials first")
+            self._log("Create credentials first", "WARNING")
         else:
             self.ssh_data.load_from_private_key_file(passwd)
             
@@ -240,7 +273,8 @@ class Task():
             with open(host_config_path, 'r') as host_config_file:
                 self.host_config = json.load(host_config_file)
         except IOError as err:
-            sys.exit(err)
+            self._log(err, 'ERROR')
+            sys.exit()
 
     def get_queue_info(self):
         """
@@ -253,8 +287,7 @@ class Task():
             data = self.ssh_session.run_command(
                 ";".join(self.host_config['queues_command']))
         else:
-            print("Warning: command not available on " +
-                  self.host_config['description'])
+            self._log(f"Warning: command not available on {self.host_config['description']}")
             data = ''
         return data[0]
 
@@ -274,7 +307,8 @@ class Task():
             if mod in self.host_config['modules']:
                 self.task_data['modules'] += self.host_config['modules'][mod]
             else:
-                sys.exit('slurm: error: unknown module set')
+                self._log('slurm: error: unknown module set', 'ERROR')
+                sys.exit()
 
     def _set_queue_settings(self, setting_id='default', settings=None, set_debug=False):
         """ 
@@ -361,8 +395,7 @@ class Task():
                           self.host_config['min_cores_per_gpu'])
                     cpus_per_task = self.host_config['min_cores_per_gpu']
             else:
-                print("Warning: GPU not available at " +
-                      self.host_config['description'])
+                self._log(f"Warning: GPU not available at {self.host_config['description']}")
                 num_gpus = 0
 
         cpus_per_task = min(cpus_per_task, total_cores)
@@ -373,11 +406,11 @@ class Task():
 
         if num_gpus:
             if ntasks_per_node > num_gpus:
-                print("Warning: Num GPUs cannot be less than ntasks per node")
+                self._log("Warning: Num GPUs cannot be less than ntasks per node")
                 num_gpus = ntasks_per_node
 
         if ntasks != ntasks_per_node * nodes:
-            print('Warning: ntasks adjusted to match requested configuration')
+            self._log('Warning: ntasks adjusted to match requested configuration')
             ntasks = ntasks_per_node * nodes
 
         settings = {
@@ -390,8 +423,7 @@ class Task():
             settings['gres'] = 'gpu:' + str(num_gpus)
         # For Gromacs
         if ntasks > 1 and cpus_per_task > 6:
-            print(
-                "Warning: requesting more OMP tasks than recommended, use -ntomp to force")
+            self._log("Warning: requesting more OMP tasks than recommended, use -ntomp to force")
 
         return settings
 
@@ -422,8 +454,8 @@ class Task():
         stdout, stderr = self.ssh_session.run_command(
             'mkdir -p ' + self._remote_wdir())
         if stderr:
-            sys.exit('Error while creating remote working directory: ' + stderr)
-
+            self._log(f'Error while creating remote working directory: {stderr}', 'ERROR')
+            sys.exit()
 
     def send_input_data(self, remote_base_path, create_dir=True, overwrite=True, new_only=True):
         """ 
@@ -448,7 +480,8 @@ class Task():
         #     sys.exit('Error while creating remote working directory: ' + stderr)
 
         if not self.task_data['local_data_bundle']:
-            sys.exit("Error: Create input data bundle first")
+            self._log("Error: Create input data bundle first")
+            sys.exit()
 
         #remote_files = self.ssh_session.run_sftp('listdir', self._remote_wdir())
         remote_files = self.get_remote_file_stats()
@@ -463,7 +496,7 @@ class Task():
             if not exists or (overwrite and (not new_only or is_new)):
                 remote_file_path = opj(self._remote_wdir(), file_name)
                 self.ssh_session.run_sftp('put', file['full_path'], remote_file_path)
-                print("sending_file: {} -> {}".format(file['full_path'], remote_file_path))
+                self._log(f"sending_file: {file['full_path']} -> {remote_file_path}")
         self.task_data['input_data_loaded'] = True
         self.modified = True
 
@@ -485,7 +518,7 @@ class Task():
         file_params = []
         for file in files.keys():
             if files[file]:
-                file_params.append("{}='{}'".format(file, files[file]))
+                file_params.append(f"{file}='{files[file]}'")
         files_str = ','.join(file_params)
 
         if properties:
@@ -499,9 +532,9 @@ class Task():
         else:
             prop_str = "properties=None"
 
-        cmd.append("{}({},{}).launch()".format(command, files_str, prop_str))
+        cmd.append(f"{command}({files_str},{prop_str}).launch()")
 
-        return '#script\npython -c "{}"\n'.format(';'.join(cmd))
+        return f'#script\npython -c "{cmd}"\n'
 
     def get_remote_comm_line(self, command, files, use_biobb=False, properties='', cmd_settings=''):
         """
@@ -617,8 +650,8 @@ class Task():
         """
         # Checking that configuration is a valid one
         if self.ssh_data.host not in self.host_config['login_hosts']:
-            sys.exit("Error. Configuration available does not apply to",
-                     self.ssh_data.host)
+            self._log(f"Error. Configuration available does not apply to {self.ssh_data.host}", 'ERROR')
+            sys.exit()
 
         self._open_ssh_session()
 
@@ -648,7 +681,7 @@ class Task():
 
         self.modified = True
 
-        print('Submitted job {}'.format(self.task_data['remote_job_id']))
+        self._log(f"Submitted job {self.task_data['remote_job_id']}")
         
         if save_file_path:
             self.save(save_file_path)
@@ -679,13 +712,13 @@ class Task():
             stdout, stderr = self.ssh_session.run_command(
                 self.commands['cancel'] + ' ' + self.task_data['remote_job_id']
             )
-            print("Job {} cancelled".format(self.task_data['remote_job_id']))
+            self._log(f"Job {self.task_data['remote_job_id']} cancelled")
             if remove_data:
                 self.clean_remote()
             self.task_data['status'] = CANCELLED
             self.modified = True
         else:
-            print("Job {} not running".format(self.task_data['remote_job_id']))
+            self._log(f"Job {self.task_data['remote_job_id']} not running")
 
     def check_queue(self):
         """ 
@@ -741,7 +774,7 @@ class Task():
                 self.save(save_file_path)
         current_time = 0
         if self.task_data['status'] is CANCELLED:
-            print("Job cancelled by user")
+            self._log("Job cancelled by user")
         else:
             if poll_time:
                 while self._check_job_status() != FINISHED:
@@ -760,9 +793,8 @@ class Task():
         Args:
             prefix(str) (Options): ('') Leading prefix to add to print lines
         """
-        print("{} Job {} is {}".format(
-            prefix, self.task_data['remote_job_id'], JOB_STATUS[self.task_data['status']]))
-
+        self._log(f"{prefix} Job {self.task_data['remote_job_id']} is {JOB_STATUS[self.task_data['status']]}")
+        
 # Output data management
     def get_remote_file(self, file):
         """
@@ -825,21 +857,23 @@ class Task():
         self._open_ssh_session()
 
         if not self.task_data['remote_base_path']:
-            sys.exit('task_recover_data: error: remote base path not available')
+            self._log('task_recover_data: error: remote base path not available', "ERROR")
+            sys.exit()
 
         if not local_data_path:
             if 'output_data_path' in self.task_data:
                 local_data_path = self.task_data['output_data_path']
             elif 'local_data_path' in self.task_data:
                 local_data_path = self.task_data['local_data_path']
-                print("Warning: re-using original input folder")
+                self._log("Warning: re-using original input folder")
             else:
-                sys.exit("ERROR: Local path for output not provided")
+                self._log("Local path for output not provided", "ERROR")
+                sys.exit()
 
         if not os.path.exists(local_data_path):
             os.mkdir(local_data_path)
         if verbose:
-            print("Getting remote file stats")
+            self._log("Getting remote file stats")
         if new_only:
             remote_files = self.get_remote_file_stats()
         else:
@@ -848,8 +882,7 @@ class Task():
         if files_only:
             for file in files_only:
                 if file not in remote_files:
-                    print(
-                        "Warning: file {} is not in the remote working dir".format(file))
+                    self._log(f"Warning: file {file} is not in the remote working dir")
 
         remote_file_list = []
         for file in remote_files:
@@ -868,7 +901,7 @@ class Task():
                 is_new = True
 
             if verbose:
-                print('{:20s} Exists: {}, New: {}'.format(file, file in local_file_names, is_new))
+                self._log(f'{file:20s} Exists: {file}, New: {is_new}')
             
             if (file not in local_file_names) or (overwrite and (not new_only or is_new)):
                 output_data_bundle.add_file(file)
@@ -879,7 +912,7 @@ class Task():
             remote_file_path = opj(self._remote_wdir(), file)
             self.ssh_session.run_sftp('get', remote_file_path, local_file_path)
 
-            print("getting_file: {} -> {}".format(remote_file_path, local_file_path))
+            self._log(f"getting_file: {remote_file_path} -> {local_file_path}")
 
         self.task_data['output_data_bundle'] = output_data_bundle
         self.task_data['output_data_path'] = local_data_path
@@ -893,7 +926,7 @@ class Task():
         
         self._open_ssh_session()
         
-        print("Removing remote data for task {}".format(self.id))
+        self._log(f"Removing remote data for task {self.id}")
         
         self.ssh_session.run_command('rm -rf ' + self._remote_wdir())
         if 'output_data_path' in self.task_data:
@@ -906,7 +939,7 @@ class Task():
         | Private. Task._remote_wdir
         | Builds full path for the remote working directory
         """
-        return self.task_data['remote_base_path'] + '/biobb_' + self.id
+        return opj(self.task_data['remote_base_path'], 'biobb_' + self.id)
 
     def _open_ssh_session(self):
         """
@@ -916,6 +949,7 @@ class Task():
         if self.ssh_session and self.ssh_session.is_active():
             return False
         if not self.ssh_data:
-            sys.exit("No credentials available")
+            self._log("No credentials available")
+            sys.exit()
         self.ssh_session = SSHSession(ssh_data=self.ssh_data, debug=self.debug)
         return False

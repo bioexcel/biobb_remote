@@ -37,9 +37,10 @@ class Slurm(Task):
         look_for_keys (bool) (Optional): (True) Allow using local user's credentials
     
     """
-    def __init__(self, host=None, userid=None, look_for_keys=True):
-        Task.__init__(self, host, userid, look_for_keys)
+    def __init__(self, host=None, userid=None, look_for_keys=True, debug_ssh=False, out_log=None, err_log=None):
+        Task.__init__(self, host, userid, look_for_keys, debug_ssh=debug_ssh, out_log=out_log, err_log=err_log)
         self.commands = SLURM_COMMANDS
+
 
     def _get_queue_settings_string_array(self):
         """
