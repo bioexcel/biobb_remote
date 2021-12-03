@@ -11,7 +11,8 @@ from io import StringIO
 from paramiko import SSHClient, AutoAddPolicy, AuthenticationException, SSHException, RSAKey
 from biobb_common.tools import file_utils as fu
 
-class SSHSession():
+
+class SSHSession:
     """ 
     | biobb_remote ssh_session.SSHSession
     | Class wrapping ssh operations 
@@ -70,9 +71,8 @@ class SSHSession():
                 print(f"[ERROR] {msg}", file=sys.stderr)
     
     def run_command(self, command):
-        """ 
-        | SSHSession.run_command
-        | Runs a shell command on remote, produces stdout, stderr tuple
+        """ SSHSession.run_command
+        Runs a shell command on remote, produces stdout, stderr tuple
             
         Args:
             command (str | list(str)): Command  or list of commands to execute on remote.
@@ -83,22 +83,21 @@ class SSHSession():
             stdin, stdout, stderr = self.ssh.exec_command(command)
         return ''.join(stdout), ''.join(stderr)
 
-
     def run_sftp(self, oper, input_file_path, output_file_path='', reuse_session=True):
-        """ 
-        | SSHSession.run_sftp
-        | Opens a SFTP session on remote and execute some file operation
+        """ SSHSession.run_sftp
+        Opens a SFTP session on remote and execute some file operation
         
         Args:
-            oper (str): Operation to perform, one of:
-                **get** - gets a single file from input_file_path (remote) to output_file_path (local).
-                **put** - puts a single file from input_file_path (local) to output_file_path (remote).
-                **create** - creates a file in output_file_path (remote) from input_file_path string.
-                **file** - opens a remote file in input_file_path for read). Returns a file handle.
-                **listdir** - returns a list of files in remote input_file_path.
+            oper (str - Operation to perform):
+                * **get** - gets a single file from input_file_path (remote) to output_file_path (local).
+                * **put** - puts a single file from input_file_path (local) to output_file_path (remote).
+                * **create** - creates a file in output_file_path (remote) from input_file_path string.
+                * **file** - opens a remote file in input_file_path for read). Returns a file handle.
+                * **listdir** - returns a list of files in remote input_file_path.
+
             input_file_path (str): Input file path or input string
-            output_file_path (str) (Optional): Output file path. Not required in some ops. 
-            reuse_session (bool) (Optional): (Treu) Re-use active SFTP session
+            output_file_path (str): ('') Output file path. Not required in some ops.
+            reuse_session (bool): (True) Re-use active SFTP session
         """
         
         #Re-using active sftp session
@@ -130,16 +129,14 @@ class SSHSession():
         return False
     
     def is_active(self):
-        """
-        | SSHSession.is_active
-        | Tests whether the defined session is active
+        """ SSHSession.is_active
+        Tests whether the defined session is active
         """
         return self.ssh and self.ssh.get_transport().is_active()
 
     def close(self):
-        """
-        | SSHSession.close
-        | Closes active SSH session
+        """ SSHSession.close
+        Closes active SSH session
         """
         if self.ssh:
             self.ssh.close()

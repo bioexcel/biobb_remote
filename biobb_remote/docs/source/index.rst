@@ -16,7 +16,7 @@ Contents
    :maxdepth: 1
 
    Introduction & installation <readme>
-   Library Documentation <modules>
+   API Documentation <modules>
    Command-Line Scripts Documentation <command_line>
 
 Indices and tables

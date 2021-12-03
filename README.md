@@ -1,3 +1,6 @@
+[![](https://readthedocs.org/projects/biobb-remote/badge/?version=latest)](https://biobb-remote.readthedocs.io/en/latest/?badge=latest)
+[![](https://img.shields.io/badge/install%20with-bioconda-brightgreen.svg?style=flat)](https://anaconda.org/bioconda/biobb_remote)
+[![](https://img.shields.io/badge/license-lgpl__2__1-blue)](https://www.gnu.org/licenses/old-licenses/lgpl-2.1.html)
 # biobb_remote
 
 ### Introduction
@@ -348,13 +351,7 @@ slurm_test [-h] --keys_path KEYS_PATH [--script SCRIPT_PATH]
 ~~~
 
 ### Version
-<<<<<<< HEAD
-v1.2.3 November 2021
- 
-=======
 v1.2.2 November 2021
-
->>>>>>> 88a0030f90c35282ac9b3e55c0cb332dba0e3230
 ### Copyright & Licensing
 This software has been developed in the MMB group (http://mmb.irbbarcelona.org) at the
 BSC (http://www.bsc.es/) & IRB (https://www.irbbarcelona.org/) for the European BioExcel (http://bioexcel.eu/), funded by the European Commission

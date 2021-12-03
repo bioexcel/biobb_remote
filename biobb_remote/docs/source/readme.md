@@ -1,3 +1,7 @@
+[![](https://readthedocs.org/projects/biobb-remote/badge/?version=latest)](https://biobb-remote.readthedocs.io/en/latest/?badge=latest)
+[![](https://img.shields.io/badge/install%20with-bioconda-brightgreen.svg?style=flat)](https://anaconda.org/bioconda/biobb_remote)
+[![](https://img.shields.io/badge/license-lgpl__2__1-blue)](https://www.gnu.org/licenses/old-licenses/lgpl-2.1.html)
+
 # biobb_remote
 
 ### Introduction
@@ -26,13 +30,11 @@ Using ANACONDA:
 
         conda install -c bioconda "biobb_remote>=1.2.2"
 
-* Usage: With conda installation BioBBs can be used with the [Python API documentation](https://
-biobb-remote.readthedocs.io/en/latest/modules.html) and the [Command Line documentation](https://
-biobb-remote.readthedocs.io/en/latest/command_line.html)
+* Usage: With conda installation BioBBs can be used with the [Python API documentation](https://biobb-remote.readthedocs.io/en/latest/modules.html) and the [Command Line documentation](https://biobb-remote.readthedocs.io/en/latest/command_line.html)
 
 ### Copyright & Licensing
-This software has been developed in the MMB group (http://mmb.irbbarcelona.org) at the
-BSC (http://www.bsc.es/) & IRB (https://www.irbbarcelona.org/) for the European BioExcel (http://bioexcel.eu/), funded by the European Commission
+This software has been developed in the [MMB group](http://mmb.irbbarcelona.org) at the
+[BSC](http://www.bsc.es/) & [IRB](https://www.irbbarcelona.org/) for the European [BioExcel](http://bioexcel.eu/), funded by the European Commission
 (EU H2020 [675728](http://cordis.europa.eu/projects/675728)).
 
 * (c) 2015-2021 [Barcelona Supercomputing Center](https://www.bsc.es/)
