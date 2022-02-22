@@ -601,7 +601,10 @@ class Task():
         scr_lines += self._get_queue_settings_string_array()
 
         for mod in self.task_data['modules']:
-            scr_lines.append('module load ' + mod)
+            if mod == 'purge':
+                scr_lines.append('module purge')
+            else:
+                scr_lines.append('module load ' + mod)
 
         if conda_env:
             scr_lines.append('conda activate ' + conda_env)
