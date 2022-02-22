@@ -9,6 +9,7 @@ import pickle
 import paramiko
 from io import StringIO
 from paramiko import SSHClient, AutoAddPolicy, AuthenticationException, SSHException, RSAKey
+from biobb_common.tools import file_utils as fu
 
 
 class SSHSession:
@@ -24,7 +25,7 @@ class SSHSession:
         debug (bool) (Optional): (False) Prints (very) verbose debug information on ssh transactions.
     """
     
-    def __init__(self, ssh_data=None, credentials_path=None, private_path=None, passwd=None, debug=False):
+    def __init__(self, ssh_data=None, credentials_path=None, private_path=None, passwd=None, debug=False, out_log=None, err_log=None):
         if ssh_data is None:
             self.ssh_data = SSHCredentials(credentials_path is None)
             if credentials_path:
@@ -37,6 +38,8 @@ class SSHSession:
         self.ssh = SSHClient()
         self.ssh.set_missing_host_key_policy(AutoAddPolicy())
         self.sftp = None
+        self.out_log = out_log
+        self.err_log = err_log
        
         if debug:
             paramiko.common.logging.basicConfig(level=paramiko.common.DEBUG)
@@ -49,10 +52,24 @@ class SSHSession:
                 look_for_keys=self.ssh_data.look_for_keys
             )
         except AuthenticationException as err:
-            sys.exit(err)
+            self._log(err, 'ERROR')
+            sys.exit()
         except SSHException as err:
-            sys.exit(err)
-
+            self._log(err, 'ERROR')
+            sys.exit()
+            
+    def _log(self, msg, label='INFO'):
+        if label != 'ERROR':
+            if self.out_log is not None:
+                fu.log(msg, self.out_log)
+            else:
+                print(f"[{label}] {msg}")
+        else:
+            if self.err_log is not None:
+                fu.log(msg, self.err_log)
+            else:
+                print(f"[ERROR] {msg}", file=sys.stderr)
+    
     def run_command(self, command):
         """ SSHSession.run_command
         Runs a shell command on remote, produces stdout, stderr tuple
@@ -95,15 +112,11 @@ class SSHSession:
             elif oper == 'create':
                 with self.sftp.file(output_file_path, "w") as remote_fileh:
                     remote_fileh.write(input_file_path)
-#            elif oper == 'open':
-#                return sftp.open(input_file_path)
             elif oper == 'file':
                 with self.sftp.file(input_file_path, "r") as remote_file:
                     return remote_file.read().decode()
             elif oper == "listdir":
                 return self.sftp.listdir(input_file_path)
-#            elif oper == 'rmdir':
-#                return sftp.rmdir(input_file_path)
             elif oper == 'lstat':
                 return self.sftp.lstat(input_file_path)
             else:
@@ -111,7 +124,8 @@ class SSHSession:
                 return True
         #TODO check appropriate errors
         except IOError as err:
-            sys.exit(err)
+            self._log(err, 'ERROR')
+            sys.exit()
         return False
     
     def is_active(self):
