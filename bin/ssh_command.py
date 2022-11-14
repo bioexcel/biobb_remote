@@ -1,1 +1,1 @@
-../scripts/ssh_command.py
+../biobb_remote/scripts/ssh_command.py

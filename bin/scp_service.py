@@ -1,1 +1,1 @@
-../scripts/scp_service.py
+../biobb_remote/scripts/scp_service.py

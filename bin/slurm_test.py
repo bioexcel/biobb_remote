@@ -1,1 +1,1 @@
-../scripts/slurm_test.py
+../biobb_remote/scripts/slurm_test.py

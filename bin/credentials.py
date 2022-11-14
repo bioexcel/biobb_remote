@@ -1,1 +1,1 @@
-../scripts/credentials.py
+../biobb_remote/scripts/credentials.py
