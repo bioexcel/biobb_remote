@@ -18,6 +18,7 @@ setuptools.setup(
         "Bioexcel": "https://bioexcel.eu/"
     },
     packages=setuptools.find_packages(exclude=['docs', 'test']),
+    package_data={'biobb_remote': ['py.typed']},
     include_package_data=True,
     zip_safe=False,
     install_requires=['paramiko==2.7.2'],
